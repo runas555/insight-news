@@ -1,10 +1,11 @@
 /**
- * SETUP_UPDATE.CJS - ASA Architecture Expansion
- * Improvements: SEO Engine, Search Module, Analytics, and Structural Dump.
+ * SETUP_RELOAD.CJS - ASA Architecture Enhancement + Nodemon DX
+ * Purpose: Infinite Dev-Cycle with Nodemon, Live Analytics Dashboard, and Category Filters.
  */
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const ANSI = {
     reset: "\x1b[0m",
@@ -28,9 +29,9 @@ function safeWrite(filePath, content) {
             history.push({ path: filePath, bak: null });
         }
         fs.writeFileSync(filePath, content, 'utf8');
-        console.log(`${ANSI.green}[OK]${ANSI.reset} Updated: ${filePath}`);
+        console.log(`${ANSI.green}[UPDATING]${ANSI.reset} ${filePath}`);
     } catch (err) {
-        console.error(`${ANSI.red}[ERROR]${ANSI.reset} ${err.message}`);
+        console.error(`${ANSI.red}[FAILED]${ANSI.reset} ${err.message}`);
         rollback();
         process.exit(1);
     }
@@ -47,96 +48,15 @@ function rollback() {
     }
 }
 
-// --- 1. GENERATE SYSTEM DUMP ---
-function generateDump() {
-    const filesToDump = [
-        'index.js', 'package.json', 'vercel.json',
-        'core/DB.js', 'core/Router.js', 'core/Views.js',
-        'public/style.css'
-    ];
-    let dumpContent = "=== ASA PROJECT STRUCTURE DUMP ===\n\n";
-    
-    filesToDump.forEach(f => {
-        if (fs.existsSync(f)) {
-            dumpContent += `\n--- FILE: ${f} ---\n`;
-            dumpContent += fs.readFileSync(f, 'utf8');
-            dumpContent += `\n--- END FILE ---\n`;
-        }
-    });
+// --- 1. UPDATE PACKAGE.JSON FOR NODEMON ---
+const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+pkg.scripts.dev = "nodemon index.js";
+pkg.devDependencies = {
+    "nodemon": "^3.0.1"
+};
+safeWrite('package.json', JSON.stringify(pkg, null, 2));
 
-    fs.writeFileSync('dump.txt', dumpContent);
-    console.log(`${ANSI.cyan}[DUMP]${ANSI.reset} Created dump.txt for sync.`);
-}
-
-// --- 2. NEW MODULE: SEO ENGINE ---
-safeWrite('core/SEO.js', `
-module.exports = {
-    generateTags(article) {
-        if (!article) return \`
-            <meta name="robots" content="index, follow">
-            <meta property="og:type" content="website">
-            <meta property="og:title" content="ASA News - Modern Architecture">
-            <meta property="og:description" content="The fastest news delivery system built on Node.js">
-        \`;
-        return \`
-            <meta name="description" content="\${article.content.substring(0, 150)}">
-            <meta property="og:title" content="\${article.title}">
-            <meta property="og:description" content="\${article.content.substring(0, 100)}">
-            <meta property="og:type" content="article">
-            <meta name="keywords" content="\${article.category}, news, tech">
-        \`;
-    }
-};`);
-
-// --- 3. NEW MODULE: ANALYTICS ---
-safeWrite('core/Analytics.js', `
-const fs = require('fs');
-const path = require('path');
-const LOG_FILE = path.join(__dirname, '../data/stats.json');
-
-module.exports = {
-    track(url) {
-        if (!fs.existsSync(path.dirname(LOG_FILE))) fs.mkdirSync(path.dirname(LOG_FILE));
-        let stats = fs.existsSync(LOG_FILE) ? JSON.parse(fs.readFileSync(LOG_FILE)) : {};
-        stats[url] = (stats[url] || 0) + 1;
-        fs.writeFileSync(LOG_FILE, JSON.stringify(stats, null, 2));
-    },
-    getStats() {
-        return fs.existsSync(LOG_FILE) ? JSON.parse(fs.readFileSync(LOG_FILE)) : {};
-    }
-};`);
-
-// --- 4. UPDATE DB: SEARCH LOGIC ---
-safeWrite('core/DB.js', `
-const fs = require('fs');
-const path = require('path');
-const DB_FILE = path.join(__dirname, '../data/articles.json');
-
-module.exports = {
-    init() {
-        if (!fs.existsSync(path.dirname(DB_FILE))) fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
-        if (!fs.existsSync(DB_FILE)) {
-            fs.writeFileSync(DB_FILE, JSON.stringify([
-                { id: 1, title: 'Future of ASA Architecture', content: 'Node.js raw performance is key...', date: '2023-10-27', category: 'Tech' },
-                { id: 2, title: 'Clean UI Design Trends', content: 'Minimalism and bottom tabs for mobile...', date: '2023-10-26', category: 'Design' }
-            ]));
-        }
-    },
-    getArticles() { return JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); },
-    getArticleById(id) { return this.getArticles().find(a => a.id == id); },
-    search(query) {
-        const q = query.toLowerCase();
-        return this.getArticles().filter(a => a.title.toLowerCase().includes(q) || a.content.toLowerCase().includes(q));
-    },
-    saveArticle(art) {
-        const data = this.getArticles();
-        art.id = Date.now();
-        data.push(art);
-        fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
-    }
-};`);
-
-// --- 5. UPDATE VIEWS: SEARCH UI & SEO INJECTION ---
+// --- 2. UPDATE VIEW ENGINE: ADD STATS DASHBOARD & CATEGORY FILTER ---
 safeWrite('core/Views.js', `
 const seo = require('./SEO');
 
@@ -153,66 +73,121 @@ module.exports = {
     \${seoTags}
     \${headContent}
     <link rel="stylesheet" href="/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <header>
         <nav class="desktop-nav">
-            <div class="logo"><i class="fas fa-bolt"></i> ASA NEWS</div>
+            <div class="logo"><a href="/"><i class="fas fa-bolt"></i> ASA NEWS</a></div>
             <div class="nav-actions">
                 <form action="/search" method="GET" class="search-box">
-                    <input name="q" placeholder="Search news...">
+                    <input name="q" placeholder="Explore stories...">
                 </form>
-                <ul><li><a href="/">Home</a></li><li><a href="/admin">Admin</a></li></ul>
+                <ul>
+                    <li><a href="/">Feed</a></li>
+                    <li><a href="/admin">Admin</a></li>
+                    <li><a href="/admin/stats">Analytics</a></li>
+                </ul>
             </div>
         </nav>
     </header>
-    <main>\${content}</main>
+    <main class="fade-in">\${content}</main>
     <div class="mobile-tabs">
         <a href="/"><i class="fas fa-home"></i><span>Home</span></a>
         <a href="/search"><i class="fas fa-search"></i><span>Search</span></a>
-        <a href="/admin"><i class="fas fa-user-shield"></i><span>Admin</span></a>
+        <a href="/admin/stats"><i class="fas fa-chart-line"></i><span>Stats</span></a>
+        <a href="/admin"><i class="fas fa-plus-circle"></i><span>Post</span></a>
     </div>
 </body>
 </html>\`;
     },
     articleList(articles) {
-        if (articles.length === 0) return '<p>No articles found.</p>';
-        return articles.map(a => \`
-            <article class="card">
-                <div class="badge">\${a.category}</div>
-                <h2>\${a.title}</h2>
-                <p>\${a.content.substring(0, 120)}...</p>
-                <div class="meta">
-                    <span><i class="far fa-calendar"></i> \${a.date}</span>
-                </div>
-                <a href="/article?id=\${a.id}" class="btn">Read Article</a>
-            </article>\`).join('');
+        if (articles.length === 0) return '<div class="no-results"><h3>No stories found.</h3><p>Try different keywords.</p></div>';
+        return \`
+            <div class="category-pills">
+                <a href="/" class="pill">All</a>
+                <a href="/search?q=Tech" class="pill">Tech</a>
+                <a href="/search?q=Design" class="pill">Design</a>
+                <a href="/search?q=World" class="pill">World</a>
+            </div>
+            <div class="grid">
+                \${articles.map(a => \`
+                <article class="card">
+                    <div class="card-content">
+                        <span class="badge">\${a.category}</span>
+                        <h2>\${a.title}</h2>
+                        <p>\${a.content.substring(0, 120)}...</p>
+                        <div class="meta">
+                            <span><i class="far fa-calendar-alt"></i> \${a.date}</span>
+                            <a href="/article?id=\${a.id}" class="read-btn">Read <i class="fas fa-chevron-right"></i></a>
+                        </div>
+                    </div>
+                </article>\`).join('')}
+            </div>\`;
+    },
+    statsPage(stats) {
+        const rows = Object.entries(stats).map(([url, count]) => \`
+            <tr>
+                <td><code>\${url}</code></td>
+                <td><span class="count-tag">\${count} views</span></td>
+            </tr>
+        \`).join('');
+        return \`
+            <section class="admin-stats">
+                <h1><i class="fas fa-chart-bar"></i> Platform Analytics</h1>
+                <table class="stats-table">
+                    <thead><tr><th>Route Path</th><th>Traffic</th></tr></thead>
+                    <tbody>\${rows}</tbody>
+                </table>
+                <a href="/admin" class="btn">Return to Editor</a>
+            </section>\`;
     },
     singleArticle(a) {
         return \`
             <div class="full-article">
-                <a href="/" class="back-link"><i class="fas fa-arrow-left"></i> Back to feed</a>
-                <h1>\${a.title}</h1>
-                <div class="meta"><span>\${a.date}</span> | <span>\${a.category}</span></div>
-                <div class="content">\${a.content}</div>
+                <header class="art-header">
+                    <a href="/" class="back-link"><i class="fas fa-arrow-left"></i> Feed</a>
+                    <span class="badge">\${a.category}</span>
+                    <h1>\${a.title}</h1>
+                    <div class="meta-line">Published on <strong>\${a.date}</strong></div>
+                </header>
+                <div class="content-body">\${a.content}</div>
             </div>\`;
     },
     adminPanel() {
         return \`
-            <section class="admin-form">
-                <h1><i class="fas fa-edit"></i> Create News</h1>
+            <section class="admin-form fade-in">
+                <div class="form-header">
+                    <h1><i class="fas fa-feather-alt"></i> Write News</h1>
+                    <p>Standardized ASA Publishing Engine</p>
+                </div>
                 <form action="/api/add" method="POST">
-                    <input name="title" placeholder="Article Title" required>
-                    <textarea name="content" rows="10" placeholder="Write your story..." required></textarea>
-                    <input name="category" placeholder="Category (e.g. World, Tech)">
-                    <button type="submit" class="btn-submit">Publish Now</button>
+                    <div class="input-group">
+                        <label>Title</label>
+                        <input name="title" placeholder="Catchy headline" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Category</label>
+                        <select name="category">
+                            <option value="Tech">Tech</option>
+                            <option value="World">World</option>
+                            <option value="Design">Design</option>
+                            <option value="Business">Business</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Body Content</label>
+                        <textarea name="content" rows="12" placeholder="Tell the world..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn-submit">
+                        <i class="fas fa-paper-plane"></i> Publish to Feed
+                    </button>
                 </form>
             </section>\`;
     }
 };`);
 
-// --- 6. UPDATE ROUTER: DYNAMIC ROUTES & ANALYTICS ---
+// --- 3. UPDATE ROUTER: ADD ANALYTICS ROUTE ---
 safeWrite('core/Router.js', `
 const url = require('url');
 const db = require('./DB');
@@ -225,6 +200,7 @@ module.exports = async (req, res) => {
     const parsed = url.parse(req.url, true);
     const method = req.method;
 
+    // Tracker
     analytics.track(parsed.pathname);
 
     if (parsed.pathname === '/' && method === 'GET') {
@@ -234,11 +210,18 @@ module.exports = async (req, res) => {
         return res.end(html);
     }
 
+    if (parsed.pathname === '/admin/stats' && method === 'GET') {
+        const stats = analytics.getStats();
+        const html = views.layout('Platform Stats', views.statsPage(stats));
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        return res.end(html);
+    }
+
     if (parsed.pathname === '/article' && method === 'GET') {
         const article = db.getArticleById(parsed.query.id);
         if (!article) {
             res.writeHead(404);
-            return res.end('Article Not Found');
+            return res.end('404 Article Not Found');
         }
         const html = views.layout(article.title, views.singleArticle(article), '', article);
         res.writeHead(200, { 'Content-Type': 'text/html' });
@@ -247,7 +230,7 @@ module.exports = async (req, res) => {
 
     if (parsed.pathname === '/search' && method === 'GET') {
         const query = parsed.query.q || '';
-        const results = query ? db.search(query) : [];
+        const results = db.search(query);
         const html = views.layout('Search: ' + query, views.articleList(results));
         res.writeHead(200, { 'Content-Type': 'text/html' });
         return res.end(html);
@@ -267,8 +250,8 @@ module.exports = async (req, res) => {
             db.saveArticle({
                 title: params.get('title'),
                 content: params.get('content'),
-                category: params.get('category') || 'General',
-                date: new Date().toLocaleDateString()
+                category: params.get('category'),
+                date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
             });
             res.writeHead(302, { Location: '/' });
             res.end();
@@ -277,59 +260,82 @@ module.exports = async (req, res) => {
     }
 
     if (parsed.pathname === '/style.css') {
-        const cssPath = path.join(__dirname, '../public/style.css');
-        if (fs.existsSync(cssPath)) {
-            res.writeHead(200, { 'Content-Type': 'text/css' });
-            return res.end(fs.readFileSync(cssPath));
-        }
+        res.writeHead(200, { 'Content-Type': 'text/css' });
+        return res.end(fs.readFileSync(path.join(__dirname, '../public/style.css')));
     }
 
     res.writeHead(404);
-    res.end('404 Not Found');
+    res.end('Route missing');
 };`);
 
-// --- 7. UPDATE CSS: MODERN UI TWEAKS ---
+// --- 4. STYLE ENHANCEMENTS (FOR ADMIN & STATS) ---
 safeWrite('public/style.css', `
-:root { --p: #2563eb; --p-dark: #1d4ed8; --s: #f8fafc; --t: #0f172a; --m: #64748b; }
-body { font-family: 'Inter', system-ui, sans-serif; margin: 0; background: var(--s); color: var(--t); line-height: 1.6; padding-bottom: 80px; }
-nav { background: #fff; padding: 0.75rem 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; sticky; top: 0; z-index: 100; }
-.nav-actions { display: flex; align-items: center; gap: 20px; }
-.search-box input { padding: 8px 15px; border-radius: 20px; border: 1px solid #cbd5e1; outline: none; transition: 0.2s; }
-.search-box input:focus { border-color: var(--p); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
-nav ul { list-style: none; display: flex; gap: 20px; margin: 0; padding: 0; }
-nav a { text-decoration: none; color: var(--t); font-weight: 600; font-size: 0.95rem; }
-main { padding: 2rem 5%; max-width: 900px; margin: auto; }
-.card { background: #fff; padding: 2rem; border-radius: 16px; margin-bottom: 2rem; border: 1px solid #e2e8f0; transition: transform 0.2s, box-shadow 0.2s; position: relative; }
-.card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
-.badge { display: inline-block; background: #dbeafe; color: var(--p); padding: 4px 12px; border-radius: 99px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 1rem; }
-.btn { display: inline-block; background: var(--p); color: #fff; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-weight: 600; transition: 0.2s; }
-.btn:hover { background: var(--p-dark); }
-.mobile-tabs { position: fixed; bottom: 0; width: 100%; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; padding: 12px 0; z-index: 1000; }
-.mobile-tabs a { text-decoration: none; color: var(--m); display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; font-weight: 500; }
+:root { --p: #4f46e5; --p-soft: #eef2ff; --t: #111827; --m: #6b7280; --white: #ffffff; }
+body { font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; background: #fbfcfd; color: var(--t); padding-bottom: 90px; }
+a { text-decoration: none; color: inherit; }
+.logo { font-weight: 800; font-size: 1.4rem; color: var(--p); letter-spacing: -0.5px; }
+nav { background: rgba(255,255,255,0.8); backdrop-filter: blur(12px); border-bottom: 1px solid #f1f5f9; padding: 1rem 5%; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; }
+.nav-actions { display: flex; gap: 30px; align-items: center; }
+nav ul { list-style: none; display: flex; gap: 20px; margin: 0; }
+nav ul a { font-weight: 600; color: var(--m); transition: 0.2s; }
+nav ul a:hover { color: var(--p); }
+.search-box input { border: 1px solid #e2e8f0; padding: 10px 18px; border-radius: 99px; background: #f8fafc; font-size: 0.9rem; width: 220px; outline: none; }
+main { padding: 3rem 5%; max-width: 1000px; margin: auto; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 2rem; }
+.card { background: var(--white); border-radius: 20px; overflow: hidden; border: 1px solid #f1f5f9; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.card:hover { transform: translateY(-8px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05); }
+.card-content { padding: 1.8rem; }
+.badge { background: var(--p-soft); color: var(--p); padding: 4px 14px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; margin-bottom: 1rem; display: inline-block; }
+.meta { display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; border-top: 1px solid #f1f5f9; padding-top: 1rem; color: var(--m); font-size: 0.85rem; }
+.read-btn { color: var(--p); font-weight: 700; }
+.category-pills { display: flex; gap: 10px; margin-bottom: 2.5rem; overflow-x: auto; padding-bottom: 5px; }
+.pill { background: #fff; border: 1px solid #e2e8f0; padding: 8px 20px; border-radius: 99px; font-weight: 600; color: var(--m); transition: 0.2s; }
+.pill:hover { border-color: var(--p); color: var(--p); }
+.stats-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+.stats-table th { background: #f8fafc; text-align: left; padding: 15px; color: var(--m); }
+.stats-table td { padding: 15px; border-top: 1px solid #f1f5f9; }
+.count-tag { background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 0.8rem; }
+.admin-form { background: #fff; padding: 2.5rem; border-radius: 24px; border: 1px solid #f1f5f9; }
+.input-group { margin-bottom: 1.5rem; }
+.input-group label { display: block; font-weight: 700; margin-bottom: 8px; color: var(--m); }
+.input-group input, .input-group select, .input-group textarea { width: 100%; padding: 14px; border: 1px solid #e2e8f0; border-radius: 12px; font-family: inherit; font-size: 1rem; box-sizing: border-box; }
+.btn-submit { width: 100%; background: var(--t); color: #fff; padding: 18px; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.3s; }
+.btn-submit:hover { opacity: 0.9; transform: scale(0.99); }
+.mobile-tabs { position: fixed; bottom: 0; width: 100%; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1px solid #f1f5f9; display: none; justify-content: space-around; padding: 12px 0; z-index: 2000; }
+.mobile-tabs a { display: flex; flex-direction: column; align-items: center; color: var(--m); font-size: 0.7rem; font-weight: 600; }
 .mobile-tabs a i { font-size: 1.4rem; margin-bottom: 4px; }
-.mobile-tabs a:hover { color: var(--p); }
-.full-article h1 { font-size: 2.5rem; margin-bottom: 1rem; }
-.back-link { text-decoration: none; color: var(--p); font-weight: 600; margin-bottom: 2rem; display: block; }
-.admin-form input, .admin-form textarea { width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; }
-.btn-submit { width: 100%; background: var(--t); color: #fff; padding: 15px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; }
+.fade-in { animation: fadeIn 0.5s ease-in; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 768px) {
-    .desktop-nav .nav-actions { display: none; }
-    .full-article h1 { font-size: 1.8rem; }
+    .desktop-nav { display: none; }
+    .mobile-tabs { display: flex; }
+    main { padding: 1.5rem 5%; }
+    .grid { grid-template-columns: 1fr; }
 }`);
 
-// --- FINALIZATION ---
-generateDump();
+// --- 5. SYSTEM DUMP GENERATOR ---
+function makeDump() {
+    const tree = ['index.js', 'core/DB.js', 'core/Router.js', 'core/Views.js', 'core/Analytics.js', 'core/SEO.js', 'public/style.css'];
+    let dump = `ASA_DUMP_v2_NODEMON\nGenerated: ${new Date().toISOString()}\n\n`;
+    tree.forEach(f => {
+        if (fs.existsSync(f)) {
+            dump += `\n>> FILE: ${f}\n${fs.readFileSync(f, 'utf8')}\n<< END\n`;
+        }
+    });
+    fs.writeFileSync('dump.txt', dump);
+}
 
-console.log(`${ANSI.green}--- UPDATE SUCCESSFUL ---${ANSI.reset}`);
-console.log(`${ANSI.yellow}1. SEO Module added.${ANSI.reset}`);
-console.log(`${ANSI.yellow}2. Analytics tracking active.${ANSI.reset}`);
-console.log(`${ANSI.yellow}3. Search functionality implemented.${ANSI.reset}`);
-console.log(`${ANSI.yellow}4. dump.txt generated for review.${ANSI.reset}`);
+// --- 6. EXECUTION ---
+console.log(`${ANSI.cyan}Cleaning environment...${ANSI.reset}`);
+makeDump();
 
-// Auto-start
+console.log(`${ANSI.green}Configuration Locked.${ANSI.reset}`);
+
 try {
-    const { execSync } = require('child_process');
+    console.log(`${ANSI.yellow}Installing Nodemon...${ANSI.reset}`);
+    execSync('npm install', { stdio: 'inherit' });
+    console.log(`${ANSI.cyan}Booting system with Nodemon ASA...${ANSI.reset}`);
     execSync('npm run dev', { stdio: 'inherit' });
 } catch (e) {
-    console.log("Server started manually: node index.js");
+    console.log(`${ANSI.red}Automatic start failed. Please run: npm install && npm run dev${ANSI.reset}`);
 }
