@@ -1,12 +1,10 @@
 /**
- * SETUP.CJS - The "Atomic Stream Architecture" (ASA) Generator
- * Purpose: Full production-ready news platform with Admin, SEO, and Mobile-first UI.
- * Implementation: Atomic modules, Zero frameworks, Node.js raw HTTP.
+ * SETUP_UPDATE.CJS - ASA Architecture Expansion
+ * Improvements: SEO Engine, Search Module, Analytics, and Structural Dump.
  */
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 
 const ANSI = {
     reset: "\x1b[0m",
@@ -21,7 +19,6 @@ const history = [];
 function safeWrite(filePath, content) {
     const dir = path.dirname(filePath);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-
     try {
         if (fs.existsSync(filePath)) {
             const bak = `${filePath}.bak`;
@@ -30,18 +27,16 @@ function safeWrite(filePath, content) {
         } else {
             history.push({ path: filePath, bak: null });
         }
-
         fs.writeFileSync(filePath, content, 'utf8');
-        console.log(`${ANSI.green}[OK]${ANSI.reset} Created/Updated: ${filePath}`);
+        console.log(`${ANSI.green}[OK]${ANSI.reset} Updated: ${filePath}`);
     } catch (err) {
-        console.error(`${ANSI.red}[ERROR]${ANSI.reset} Failed on ${filePath}: ${err.message}`);
+        console.error(`${ANSI.red}[ERROR]${ANSI.reset} ${err.message}`);
         rollback();
         process.exit(1);
     }
 }
 
 function rollback() {
-    console.log(`${ANSI.yellow}Initiating rollback...${ANSI.reset}`);
     for (const item of history) {
         if (item.bak && fs.existsSync(item.bak)) {
             fs.copyFileSync(item.bak, item.path);
@@ -50,27 +45,68 @@ function rollback() {
             fs.unlinkSync(item.path);
         }
     }
-    console.log(`${ANSI.red}Rollback complete. System restored.${ANSI.reset}`);
 }
 
-// 1. PROJECT INITIALIZATION
-const packageJson = {
-    name: "atomic-news-pro",
-    version: "1.0.0",
-    description: "ASA Architecture Framework",
-    main: "index.js",
-    scripts: {
-        "start": "node index.js",
-        "dev": "node index.js"
-    },
-    engines: {
-        "node": ">=14.0.0"
+// --- 1. GENERATE SYSTEM DUMP ---
+function generateDump() {
+    const filesToDump = [
+        'index.js', 'package.json', 'vercel.json',
+        'core/DB.js', 'core/Router.js', 'core/Views.js',
+        'public/style.css'
+    ];
+    let dumpContent = "=== ASA PROJECT STRUCTURE DUMP ===\n\n";
+    
+    filesToDump.forEach(f => {
+        if (fs.existsSync(f)) {
+            dumpContent += `\n--- FILE: ${f} ---\n`;
+            dumpContent += fs.readFileSync(f, 'utf8');
+            dumpContent += `\n--- END FILE ---\n`;
+        }
+    });
+
+    fs.writeFileSync('dump.txt', dumpContent);
+    console.log(`${ANSI.cyan}[DUMP]${ANSI.reset} Created dump.txt for sync.`);
+}
+
+// --- 2. NEW MODULE: SEO ENGINE ---
+safeWrite('core/SEO.js', `
+module.exports = {
+    generateTags(article) {
+        if (!article) return \`
+            <meta name="robots" content="index, follow">
+            <meta property="og:type" content="website">
+            <meta property="og:title" content="ASA News - Modern Architecture">
+            <meta property="og:description" content="The fastest news delivery system built on Node.js">
+        \`;
+        return \`
+            <meta name="description" content="\${article.content.substring(0, 150)}">
+            <meta property="og:title" content="\${article.title}">
+            <meta property="og:description" content="\${article.content.substring(0, 100)}">
+            <meta property="og:type" content="article">
+            <meta name="keywords" content="\${article.category}, news, tech">
+        \`;
     }
-};
+};`);
 
-safeWrite('package.json', JSON.stringify(packageJson, null, 2));
+// --- 3. NEW MODULE: ANALYTICS ---
+safeWrite('core/Analytics.js', `
+const fs = require('fs');
+const path = require('path');
+const LOG_FILE = path.join(__dirname, '../data/stats.json');
 
-// 2. DATA LAYER (Core Module)
+module.exports = {
+    track(url) {
+        if (!fs.existsSync(path.dirname(LOG_FILE))) fs.mkdirSync(path.dirname(LOG_FILE));
+        let stats = fs.existsSync(LOG_FILE) ? JSON.parse(fs.readFileSync(LOG_FILE)) : {};
+        stats[url] = (stats[url] || 0) + 1;
+        fs.writeFileSync(LOG_FILE, JSON.stringify(stats, null, 2));
+    },
+    getStats() {
+        return fs.existsSync(LOG_FILE) ? JSON.parse(fs.readFileSync(LOG_FILE)) : {};
+    }
+};`);
+
+// --- 4. UPDATE DB: SEARCH LOGIC ---
 safeWrite('core/DB.js', `
 const fs = require('fs');
 const path = require('path');
@@ -78,7 +114,7 @@ const DB_FILE = path.join(__dirname, '../data/articles.json');
 
 module.exports = {
     init() {
-        if (!fs.existsSync(path.dirname(DB_FILE))) fs.mkdirSync(path.dirname(DB_FILE));
+        if (!fs.existsSync(path.dirname(DB_FILE))) fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
         if (!fs.existsSync(DB_FILE)) {
             fs.writeFileSync(DB_FILE, JSON.stringify([
                 { id: 1, title: 'Future of ASA Architecture', content: 'Node.js raw performance is key...', date: '2023-10-27', category: 'Tech' },
@@ -87,6 +123,11 @@ module.exports = {
         }
     },
     getArticles() { return JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); },
+    getArticleById(id) { return this.getArticles().find(a => a.id == id); },
+    search(query) {
+        const q = query.toLowerCase();
+        return this.getArticles().filter(a => a.title.toLowerCase().includes(q) || a.content.toLowerCase().includes(q));
+    },
     saveArticle(art) {
         const data = this.getArticles();
         art.id = Date.now();
@@ -95,89 +136,88 @@ module.exports = {
     }
 };`);
 
-// 3. SEO-READY VIEW ENGINE (Core Module)
+// --- 5. UPDATE VIEWS: SEARCH UI & SEO INJECTION ---
 safeWrite('core/Views.js', `
+const seo = require('./SEO');
+
 module.exports = {
-    layout(title, content, head = '') {
+    layout(title, content, headContent = '', article = null) {
+        const seoTags = seo.generateTags(article);
         return \`
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Advanced Node News Hub">
     <title>\${title} | ASA News</title>
+    \${seoTags}
+    \${headContent}
     <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    \${head}
 </head>
 <body>
     <header>
         <nav class="desktop-nav">
-            <div class="logo">ASA News</div>
-            <ul><li><a href="/">Home</a></li><li><a href="/admin">Admin</a></li></ul>
+            <div class="logo"><i class="fas fa-bolt"></i> ASA NEWS</div>
+            <div class="nav-actions">
+                <form action="/search" method="GET" class="search-box">
+                    <input name="q" placeholder="Search news...">
+                </form>
+                <ul><li><a href="/">Home</a></li><li><a href="/admin">Admin</a></li></ul>
+            </div>
         </nav>
     </header>
     <main>\${content}</main>
     <div class="mobile-tabs">
         <a href="/"><i class="fas fa-home"></i><span>Home</span></a>
-        <a href="/discover"><i class="fas fa-search"></i><span>Discover</span></a>
+        <a href="/search"><i class="fas fa-search"></i><span>Search</span></a>
         <a href="/admin"><i class="fas fa-user-shield"></i><span>Admin</span></a>
     </div>
 </body>
 </html>\`;
     },
     articleList(articles) {
+        if (articles.length === 0) return '<p>No articles found.</p>';
         return articles.map(a => \`
             <article class="card">
+                <div class="badge">\${a.category}</div>
                 <h2>\${a.title}</h2>
-                <p>\${a.content.substring(0, 100)}...</p>
-                <div class="meta"><span>\${a.date}</span><span>\${a.category}</span></div>
-                <a href="/article?id=\${a.id}" class="btn">Read More</a>
+                <p>\${a.content.substring(0, 120)}...</p>
+                <div class="meta">
+                    <span><i class="far fa-calendar"></i> \${a.date}</span>
+                </div>
+                <a href="/article?id=\${a.id}" class="btn">Read Article</a>
             </article>\`).join('');
+    },
+    singleArticle(a) {
+        return \`
+            <div class="full-article">
+                <a href="/" class="back-link"><i class="fas fa-arrow-left"></i> Back to feed</a>
+                <h1>\${a.title}</h1>
+                <div class="meta"><span>\${a.date}</span> | <span>\${a.category}</span></div>
+                <div class="content">\${a.content}</div>
+            </div>\`;
     },
     adminPanel() {
         return \`
             <section class="admin-form">
-                <h1>Post New Article</h1>
+                <h1><i class="fas fa-edit"></i> Create News</h1>
                 <form action="/api/add" method="POST">
-                    <input name="title" placeholder="Title" required>
-                    <textarea name="content" placeholder="Content text" required></textarea>
-                    <input name="category" placeholder="Category">
-                    <button type="submit">Publish</button>
+                    <input name="title" placeholder="Article Title" required>
+                    <textarea name="content" rows="10" placeholder="Write your story..." required></textarea>
+                    <input name="category" placeholder="Category (e.g. World, Tech)">
+                    <button type="submit" class="btn-submit">Publish Now</button>
                 </form>
             </section>\`;
     }
 };`);
 
-// 4. THE CSS (Modern & Mobile-first)
-safeWrite('public/style.css', `
-:root { --p: #2563eb; --s: #f8fafc; --t: #1e293b; }
-body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--s); color: var(--t); padding-bottom: 70px; }
-.logo { font-weight: 800; font-size: 1.5rem; color: var(--p); }
-nav { background: #fff; padding: 1rem 5%; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-nav ul { list-style: none; display: flex; gap: 20px; }
-nav a { text-decoration: none; color: var(--t); font-weight: 500; }
-main { padding: 2rem 5%; max-width: 1200px; margin: auto; }
-.card { background: #fff; padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); transition: 0.3s; }
-.card:hover { transform: translateY(-3px); }
-.meta { display: flex; gap: 15px; color: #64748b; font-size: 0.85rem; margin: 1rem 0; }
-.btn { display: inline-block; background: var(--p); color: #fff; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; }
-.mobile-tabs { position: fixed; bottom: 0; width: 100%; background: #fff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; padding: 10px 0; display: none; }
-.mobile-tabs a { text-decoration: none; color: #64748b; display: flex; flex-direction: column; align-items: center; font-size: 0.75rem; }
-.mobile-tabs a i { font-size: 1.25rem; margin-bottom: 4px; }
-.admin-form form { display: flex; flex-direction: column; gap: 1rem; }
-.admin-form input, textarea { padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 1rem; }
-@media (max-width: 768px) {
-    .desktop-nav { display: none; }
-    .mobile-tabs { display: flex; }
-}`);
-
-// 5. SERVER LOGIC (Core Module)
+// --- 6. UPDATE ROUTER: DYNAMIC ROUTES & ANALYTICS ---
 safeWrite('core/Router.js', `
 const url = require('url');
 const db = require('./DB');
 const views = require('./Views');
+const analytics = require('./Analytics');
 const fs = require('fs');
 const path = require('path');
 
@@ -185,9 +225,30 @@ module.exports = async (req, res) => {
     const parsed = url.parse(req.url, true);
     const method = req.method;
 
+    analytics.track(parsed.pathname);
+
     if (parsed.pathname === '/' && method === 'GET') {
         const articles = db.getArticles();
         const html = views.layout('Global News', views.articleList(articles));
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        return res.end(html);
+    }
+
+    if (parsed.pathname === '/article' && method === 'GET') {
+        const article = db.getArticleById(parsed.query.id);
+        if (!article) {
+            res.writeHead(404);
+            return res.end('Article Not Found');
+        }
+        const html = views.layout(article.title, views.singleArticle(article), '', article);
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        return res.end(html);
+    }
+
+    if (parsed.pathname === '/search' && method === 'GET') {
+        const query = parsed.query.q || '';
+        const results = query ? db.search(query) : [];
+        const html = views.layout('Search: ' + query, views.articleList(results));
         res.writeHead(200, { 'Content-Type': 'text/html' });
         return res.end(html);
     }
@@ -206,8 +267,8 @@ module.exports = async (req, res) => {
             db.saveArticle({
                 title: params.get('title'),
                 content: params.get('content'),
-                category: params.get('category'),
-                date: new Date().toISOString().split('T')[0]
+                category: params.get('category') || 'General',
+                date: new Date().toLocaleDateString()
             });
             res.writeHead(302, { Location: '/' });
             res.end();
@@ -216,55 +277,59 @@ module.exports = async (req, res) => {
     }
 
     if (parsed.pathname === '/style.css') {
-        const css = fs.readFileSync(path.join(__dirname, '../public/style.css'));
-        res.writeHead(200, { 'Content-Type': 'text/css' });
-        return res.end(css);
+        const cssPath = path.join(__dirname, '../public/style.css');
+        if (fs.existsSync(cssPath)) {
+            res.writeHead(200, { 'Content-Type': 'text/css' });
+            return res.end(fs.readFileSync(cssPath));
+        }
     }
 
     res.writeHead(404);
-    res.end('Not Found');
+    res.end('404 Not Found');
 };`);
 
-// 6. MAIN ENTRY POINT
-safeWrite('index.js', `
-const http = require('http');
-const db = require('./core/DB');
-const router = require('./core/Router');
+// --- 7. UPDATE CSS: MODERN UI TWEAKS ---
+safeWrite('public/style.css', `
+:root { --p: #2563eb; --p-dark: #1d4ed8; --s: #f8fafc; --t: #0f172a; --m: #64748b; }
+body { font-family: 'Inter', system-ui, sans-serif; margin: 0; background: var(--s); color: var(--t); line-height: 1.6; padding-bottom: 80px; }
+nav { background: #fff; padding: 0.75rem 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; sticky; top: 0; z-index: 100; }
+.nav-actions { display: flex; align-items: center; gap: 20px; }
+.search-box input { padding: 8px 15px; border-radius: 20px; border: 1px solid #cbd5e1; outline: none; transition: 0.2s; }
+.search-box input:focus { border-color: var(--p); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+nav ul { list-style: none; display: flex; gap: 20px; margin: 0; padding: 0; }
+nav a { text-decoration: none; color: var(--t); font-weight: 600; font-size: 0.95rem; }
+main { padding: 2rem 5%; max-width: 900px; margin: auto; }
+.card { background: #fff; padding: 2rem; border-radius: 16px; margin-bottom: 2rem; border: 1px solid #e2e8f0; transition: transform 0.2s, box-shadow 0.2s; position: relative; }
+.card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
+.badge { display: inline-block; background: #dbeafe; color: var(--p); padding: 4px 12px; border-radius: 99px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 1rem; }
+.btn { display: inline-block; background: var(--p); color: #fff; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-weight: 600; transition: 0.2s; }
+.btn:hover { background: var(--p-dark); }
+.mobile-tabs { position: fixed; bottom: 0; width: 100%; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; padding: 12px 0; z-index: 1000; }
+.mobile-tabs a { text-decoration: none; color: var(--m); display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; font-weight: 500; }
+.mobile-tabs a i { font-size: 1.4rem; margin-bottom: 4px; }
+.mobile-tabs a:hover { color: var(--p); }
+.full-article h1 { font-size: 2.5rem; margin-bottom: 1rem; }
+.back-link { text-decoration: none; color: var(--p); font-weight: 600; margin-bottom: 2rem; display: block; }
+.admin-form input, .admin-form textarea { width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; }
+.btn-submit { width: 100%; background: var(--t); color: #fff; padding: 15px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; }
+@media (max-width: 768px) {
+    .desktop-nav .nav-actions { display: none; }
+    .full-article h1 { font-size: 1.8rem; }
+}`);
 
-const PORT = process.env.PORT || 3000;
+// --- FINALIZATION ---
+generateDump();
 
-db.init();
+console.log(`${ANSI.green}--- UPDATE SUCCESSFUL ---${ANSI.reset}`);
+console.log(`${ANSI.yellow}1. SEO Module added.${ANSI.reset}`);
+console.log(`${ANSI.yellow}2. Analytics tracking active.${ANSI.reset}`);
+console.log(`${ANSI.yellow}3. Search functionality implemented.${ANSI.reset}`);
+console.log(`${ANSI.yellow}4. dump.txt generated for review.${ANSI.reset}`);
 
-const server = http.createServer(async (req, res) => {
-    try {
-        await router(req, res);
-    } catch (err) {
-        console.error(err);
-        res.writeHead(500);
-        res.end('ASA System Error');
-    }
-});
-
-server.listen(PORT, () => {
-    console.log('--- ASA News Platform ---');
-    console.log('Status: ACTIVE');
-    console.log('URL: http://localhost:' + PORT);
-});`);
-
-// 7. VERCEL CONFIG
-safeWrite('vercel.json', JSON.stringify({
-    version: 2,
-    builds: [{ src: "index.js", use: "@vercel/node" }],
-    routes: [{ src: "/(.*)", dest: "index.js" }]
-}, null, 2));
-
-// FINALIZING
-console.log(`${ANSI.cyan}Cleaning legacy backup files...${ANSI.reset}`);
-history.forEach(h => {
-    if (h.bak && fs.existsSync(h.bak)) fs.unlinkSync(h.bak);
-});
-
-console.log(`${ANSI.green}Deployment construction successful.${ANSI.reset}`);
-console.log(`${ANSI.yellow}Starting development node...${ANSI.reset}`);
-
-execSync('npm run dev', { stdio: 'inherit' });
+// Auto-start
+try {
+    const { execSync } = require('child_process');
+    execSync('npm run dev', { stdio: 'inherit' });
+} catch (e) {
+    console.log("Server started manually: node index.js");
+}
