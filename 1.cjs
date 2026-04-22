@@ -41,53 +41,45 @@ function addReplacement(filePath, anchor, replacement, description) {
     tasks.push({ filePath, anchor, replacement, description });
 }
 
-// --- ИСПРАВЛЕНИЯ ОШИБОК ---
+// --- ПЕРЕХОД НА ЛОГИН И ПАРОЛЬ ---
 
-// ИСПРАВЛЕНИЕ ГЛАВНОЙ ОШИБКИ: Дублирование переменной stats
+// 1. Меняем константы в Router.js
 addReplacement(
     'core/Router.js',
-    "const stats = analytics.getStats(); const stats = analytics.getStats();",
-    "const stats = analytics.getStats();",
-    "Удаление дубликата переменной 'stats'"
+    'const ADMIN_PIN = "1234";',
+    'const ADMIN_USER = "admin";\nconst ADMIN_PASS = "admin123";',
+    "Замена PIN на LOGIN/PASSWORD константы"
 );
 
-// Исправление слипшегося экспорта
+// 2. Обновляем логику проверки в /api/login (Router.js)
 addReplacement(
     'core/Router.js',
-    "auth=asa-admin');module.exports = async",
-    "auth=asa-admin');\n\nmodule.exports = async",
-    "Разделение checkAuth и module.exports"
+    "if (p.get('pin') === ADMIN_PIN)",
+    "if (p.get('user') === ADMIN_USER && p.get('pass') === ADMIN_PASS)",
+    "Обновление проверки логина и пароля в API"
 );
 
-// Исправление слипшегося метода и аналитики
+// 3. Обновляем форму входа во Views.js
 addReplacement(
-    'core/Router.js',
-    "analytics.track(parsed.pathname); }const method = req.method;",
-    "analytics.track(parsed.pathname);\n    }\n    const method = req.method;",
-    "Разделение блока аналитики и переменной method"
+    'core/Views.js',
+    '<input type="password" name="pin" placeholder="Enter Security PIN" required>',
+    '<input type="text" name="user" placeholder="Username" required>\n                        <input type="password" name="pass" placeholder="Password" required>',
+    "Добавление полей Логин и Пароль в форму входа"
 );
 
-// Исправление слипшегося закрытия блока /admin
+// 4. Улучшаем заголовок формы во Views.js
 addReplacement(
-    'core/Router.js',
-    "views.adminPanel('', stats)));}",
-    "views.adminPanel('', stats)));\n    }",
-    "Исправление форматирования блока /admin"
-);
-
-// Исправление логики ошибки в /api/add (чтобы вела на Login, если нет прав)
-addReplacement(
-    'core/Router.js',
-    "if (!checkAuth(req)) {return res.end(views.layout('Portal', views.adminPanel('Invalid Security PIN'))); }",
-    "if (!checkAuth(req)) {\n                return res.end(views.layout('Login', views.adminLogin('Unauthorized access')));\n            }",
-    "Обновление проверки авторизации в /api/add"
+    'core/Views.js',
+    '<h2>Admin Access</h2>',
+    '<h2>Management Login</h2>',
+    "Обновление заголовка формы"
 );
 
 /**
  * 3. ИСПОЛНЕНИЕ С ТРАНЗАКЦИЕЙ
  */
 function runTransformations() {
-    console.log('\n--- [2/3] APPLYING FIXES ---');
+    console.log('\n--- [2/3] APPLYING LOGIN LOGIC ---');
     const changedFiles = new Set();
 
     for (const task of tasks) {
@@ -107,7 +99,6 @@ function runTransformations() {
         }
 
         let content = fs.readFileSync(filePath, 'utf8');
-        // Регулярка для поиска с игнорированием пробелов
         const escapedAnchor = anchor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regexStr = escapedAnchor.split(/\s+/).filter(s => s.length > 0).map(s => s + '\\s*').join('');
         const regex = new RegExp(regexStr, 'm');
@@ -123,17 +114,16 @@ function runTransformations() {
 
     console.log('\n--- [3/3] FINALIZING ---');
     if (hasError) {
-        console.log('[ROLLBACK]: Error detected. Restoring files to original state...');
+        console.log('[ROLLBACK]: Error detected. Restoring files...');
         backups.forEach((content, filePath) => {
             fs.writeFileSync(filePath, content);
             if (fs.existsSync(filePath + '.bak')) fs.unlinkSync(filePath + '.bak');
         });
-        console.log('[DONE]: Rollback complete.');
     } else {
         changedFiles.forEach(filePath => {
             if (fs.existsSync(filePath + '.bak')) fs.unlinkSync(filePath + '.bak');
         });
-        console.log('[DONE]: All fixes applied successfully.');
+        console.log('[DONE]: Admin now requires Username and Password.');
     }
 }
 

@@ -74,14 +74,17 @@ const fs = require('fs');
 const path = require('path');
 
 const ADMIN_PIN = "1234";
-const checkAuth = (req) => (req.headers.cookie || '').includes('auth=asa-admin');module.exports = async (req, res) => {
+const checkAuth = (req) => (req.headers.cookie || '').includes('auth=asa-admin');
+
+module.exports = async(req, res) => {
     const parsed = url.parse(req.url, true);
     const analytics = require('./Analytics');
     const sitemap = require('./Sitemap');
     const isStatic = parsed.pathname.includes('.');
     if (!isStatic && !parsed.pathname.startsWith('/api')) {
         analytics.track(parsed.pathname);
-    }const method = req.method;// PERFORMANCE: Cache-Control for Static Files
+    }
+    const method = req.method;// PERFORMANCE: Cache-Control for Static Files
     if (parsed.pathname === '/style.css') {
         res.writeHead(200, { 
             'Content-Type': 'text/css',
@@ -128,10 +131,8 @@ const checkAuth = (req) => (req.headers.cookie || '').includes('auth=asa-admin')
 
     if (parsed.pathname === '/admin' && method === 'GET') {
         if (!checkAuth(req)) return res.end(views.layout('Login', views.adminLogin()));
-        const stats = analytics.getStats();const stats = analytics.getStats();
-        return res.end(views.layout('Admin', views.adminPanel('', stats)));}
-
-    if (parsed.pathname === '/api/login' && method === 'POST') {
+        const stats = analytics.getStats();return res.end(views.layout('Admin', views.adminPanel('', stats)));
+    }if (parsed.pathname === '/api/login' && method === 'POST') {
         let body = '';
         req.on('data', c => body += c);
         req.on('end', () => {
@@ -152,10 +153,9 @@ const checkAuth = (req) => (req.headers.cookie || '').includes('auth=asa-admin')
             const p = new URLSearchParams(body);
             
             // Security Check
-            if (!checkAuth(req)) {return res.end(views.layout('Portal', views.adminPanel('Invalid Security PIN')));
-            }
-
-            db.saveArticle({
+            if (!checkAuth(req)) {
+                return res.end(views.layout('Login', views.adminLogin('Unauthorized access')));
+            }db.saveArticle({
                 title: p.get('title'),
                 content: p.get('content'),
                 category: p.get('category') || 'General',
@@ -387,9 +387,9 @@ module.exports = {
   "/search": 21,
   "/.well-known/appspecific/com.chrome.devtools.json": 73,
   "/style.css": 65,
-  "/": 31,
+  "/": 33,
   "/article": 8,
-  "/admin": 5,
+  "/admin": 9,
   "/admin/stats": 2,
   "/admin/index.html": 3,
   "/admin/": 2

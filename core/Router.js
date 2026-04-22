@@ -5,8 +5,8 @@ const views = require('./Views');
 const fs = require('fs');
 const path = require('path');
 
-const ADMIN_PIN = "1234";
-const checkAuth = (req) => (req.headers.cookie || '').includes('auth=asa-admin');
+const ADMIN_USER = "admin";
+const ADMIN_PASS = "admin123";const checkAuth = (req) => (req.headers.cookie || '').includes('auth=asa-admin');
 
 module.exports = async(req, res) => {
     const parsed = url.parse(req.url, true);
@@ -69,7 +69,7 @@ module.exports = async(req, res) => {
         req.on('data', c => body += c);
         req.on('end', () => {
             const p = new URLSearchParams(body);
-            if (p.get('pin') === ADMIN_PIN) {
+            if (p.get('user') === ADMIN_USER && p.get('pass') === ADMIN_PASS){
                 res.writeHead(302, { 'Set-Cookie': 'auth=asa-admin; Path=/; HttpOnly', 'Location': '/admin' });
             } else {
                 res.writeHead(302, { 'Location': '/admin?error=1' });

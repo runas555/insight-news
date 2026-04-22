@@ -111,7 +111,8 @@ module.exports = {
             </article>`;
     },
     adminLogin(error = '') {
-        return `<div class="admin-wrapper"><div class="admin-card"><h2>Admin Access</h2><form action="/api/login" method="POST"><input type="password" name="pin" placeholder="Enter Security PIN" required><button type="submit">Login</button></form></div></div>`;
+        return `<div class="admin-wrapper"><div class="admin-card"><h2>Management Login</h2><form action="/api/login" method="POST"><input type="text" name="user" placeholder="Username" required>
+                        <input type="password" name="pass" placeholder="Password" required><button type="submit">Login</button></form></div></div>`;
     },
     adminPanel(error = '', stats = {}) {const statsHtml = Object.entries(stats).map(([url, count]) => `<li><code>${url}</code>: <strong>${count}</strong></li>`).join('');return `
             <div class="admin-wrapper">
