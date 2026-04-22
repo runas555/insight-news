@@ -19,8 +19,7 @@ module.exports = {
     <div id="progress-bar"></div>
     <header class="main-header">
         <nav class="container">
-            <div class="logo"><a href="/">Insight<span>News</span></a></div>
-            <div class="nav-right">
+            <div class="logo"><a href="/">Insight<span>Daily</span></a></div><div class="nav-right">
                 <a href="/search?q=Tech" class="nav-link">Tech</a>
                 <a href="/search?q=Design" class="nav-link">Design</a>
                 <button class="icon-btn" onclick="toggleSearch()"><i class="fas fa-search"></i></button>
@@ -41,8 +40,7 @@ module.exports = {
     <div class="mobile-tabs">
         <a href="/"><i class="fas fa-layer-group"></i><span>Feed</span></a>
         <a href="/search?q=Trending"><i class="fas fa-bolt"></i><span>Hot</span></a>
-        <a href="/manage-portal"><i class="fas fa-user-circle"></i><span>Portal</span></a>
-    </div>
+        <a href="/search?q=Tech"><i class="fas fa-microchip"></i><span>Tech</span></a></div>
 
     <script>
         function toggleSearch() {

@@ -53,7 +53,7 @@ module.exports = async (req, res) => {
     }
 
     // PROTECTED ADMIN
-    if (parsed.pathname === '/manage-portal' && method === 'GET') {
+    if (parsed.pathname === '/vibe-gate'&& method === 'GET') {
         return res.end(views.layout('Portal', views.adminPanel()));
     }
 

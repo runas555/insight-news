@@ -1,9 +1,11 @@
 {
-  "/search": 16,
-  "/.well-known/appspecific/com.chrome.devtools.json": 46,
-  "/style.css": 46,
-  "/": 20,
-  "/article": 6,
-  "/admin": 2,
-  "/admin/stats": 2
+  "/search": 18,
+  "/.well-known/appspecific/com.chrome.devtools.json": 63,
+  "/style.css": 56,
+  "/": 26,
+  "/article": 8,
+  "/admin": 3,
+  "/admin/stats": 2,
+  "/admin/index.html": 2,
+  "/admin/": 2
 }
