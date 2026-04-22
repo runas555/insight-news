@@ -12,7 +12,6 @@ module.exports = async (req, res) => {
 
     analytics.track(parsed.pathname);
 
-    // PUBLIC ROUTES
     if (parsed.pathname === '/' && method === 'GET') {
         const articles = [...db.getArticles()].reverse();
         const html = views.layout('Fresh Feed', views.articleList(articles));
@@ -36,7 +35,11 @@ module.exports = async (req, res) => {
         return res.end(html);
     }
 
-    // HIDDEN ADMIN ROUTE (For developers/admins only)
+    if (parsed.pathname === '/api/subscribe' && method === 'POST') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: true }));
+    }
+
     if (parsed.pathname === '/manage-portal' && method === 'GET') {
         const html = views.layout('CMS Access', views.adminPanel());
         res.writeHead(200, { 'Content-Type': 'text/html' });

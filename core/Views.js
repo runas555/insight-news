@@ -16,17 +16,26 @@ module.exports = {
     <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+    <script>
+        // Dark Mode Logic
+        if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
 </head>
 <body>
     <div id="progress-bar"></div>
+    
     <header class="main-header">
         <nav class="container">
             <div class="logo"><a href="/">Insight<span>Daily</span></a></div>
             <div class="nav-links">
                 <a href="/search?q=Technology">Technology</a>
-                <a href="/search?q=Culture">Culture</a>
                 <a href="/search?q=Business">Business</a>
-                <div class="search-trigger" onclick="document.querySelector('.search-overlay').style.display='flex'">
+                <div class="theme-toggle" onclick="toggleTheme()">
+                    <i class="fas fa-moon"></i>
+                </div>
+                <div class="search-trigger" onclick="toggleSearch(true)">
                     <i class="fas fa-search"></i>
                 </div>
             </div>
@@ -34,28 +43,74 @@ module.exports = {
     </header>
 
     <div class="search-overlay">
-        <div class="close-search" onclick="document.querySelector('.search-overlay').style.display='none'">&times;</div>
+        <div class="close-search" onclick="toggleSearch(false)">&times;</div>
         <form action="/search" method="GET">
-            <input name="q" placeholder="What are you looking for?" autofocus>
+            <input name="q" id="search-input" placeholder="Search stories..." autocomplete="off">
         </form>
     </div>
 
     <main class="container fade-in">${content}</main>
 
+    <section class="newsletter-section">
+        <div class="container">
+            <div class="newsletter-box">
+                <h2>The Morning Brief</h2>
+                <p>Get the most important stories delivered to your inbox every day.</p>
+                <form onsubmit="subscribe(event)">
+                    <input type="email" id="sub-email" placeholder="Email address" required>
+                    <button type="submit">Subscribe</button>
+                </form>
+                <div id="sub-msg"></div>
+            </div>
+        </div>
+    </section>
+
     <footer class="main-footer">
         <div class="container">
-            <p>&copy; 2024 Insight Daily. Professional Journalism.</p>
+            <div class="footer-grid">
+                <div class="footer-brand">Insight Daily</div>
+                <div class="footer-links">
+                    <a href="/manage-portal">Admin Access</a>
+                </div>
+            </div>
+            <p class="copyright">&copy; 2024 Insight Daily. Built with ASA Architecture.</p>
         </div>
     </footer>
 
     <div class="mobile-tabs">
-        <a href="/"><i class="fas fa-newspaper"></i><span>Feed</span></a>
-        <a href="/search?q=Tech"><i class="fas fa-microchip"></i><span>Tech</span></a>
-        <a href="/search?q=World"><i class="fas fa-globe-americas"></i><span>World</span></a>
-        <div onclick="document.querySelector('.search-overlay').style.display='flex'"><i class="fas fa-search"></i><span>Search</span></div>
+        <a href="/"><i class="fas fa-home"></i><span>Home</span></a>
+        <a href="/search?q=Tech"><i class="fas fa-bolt"></i><span>Trending</span></a>
+        <div onclick="toggleTheme()"><i class="fas fa-adjust"></i><span>Theme</span></div>
+        <div onclick="toggleSearch(true)"><i class="fas fa-search"></i><span>Search</span></div>
     </div>
 
     <script>
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+
+        function toggleSearch(show) {
+            const el = document.querySelector('.search-overlay');
+            el.style.display = show ? 'flex' : 'none';
+            if(show) document.getElementById('search-input').focus();
+        }
+
+        function subscribe(e) {
+            e.preventDefault();
+            const email = document.getElementById('sub-email').value;
+            fetch('/api/subscribe', { method: 'POST', body: 'email=' + encodeURIComponent(email) })
+                .then(() => {
+                    document.getElementById('sub-msg').innerText = "You're in! Check your inbox.";
+                    document.getElementById('sub-email').value = '';
+                });
+        }
+
+        function copyLink() {
+            navigator.clipboard.writeText(window.location.href);
+            alert('Link copied to clipboard!');
+        }
+
         window.onscroll = function() {
             let winScroll = document.body.scrollTop || document.documentElement.scrollTop;
             let height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
@@ -68,20 +123,17 @@ module.exports = {
     },
     articleList(articles) {
         if (articles.length === 0) return '<div class="empty"><h2>No stories found.</h2><a href="/">Back to Feed</a></div>';
-        
-        // Highlight first article as "Featured"
         const featured = articles[0];
         const rest = articles.slice(1);
 
         return `
             <section class="featured-hero">
-                <div class="badge-featured">Featured Story</div>
+                <div class="badge-featured">Featured</div>
                 <h1>${featured.title}</h1>
-                <p>${featured.content.substring(0, 180)}...</p>
-                <a href="/article?id=${featured.id}" class="read-more">Full Story <i class="fas fa-arrow-right"></i></a>
+                <p>${featured.content.substring(0, 200)}...</p>
+                <a href="/article?id=${featured.id}" class="read-more">Read Full Story</a>
             </section>
 
-            <div class="section-title">Latest Updates</div>
             <div class="article-grid">
                 ${rest.map(a => `
                 <article class="news-card">
@@ -102,29 +154,27 @@ module.exports = {
                     <span class="category-tag">${a.category}</span>
                     <h1>${a.title}</h1>
                     <div class="article-meta">
-                        By Editor &bull; ${a.date} &bull; ${Math.ceil(a.content.length / 500)} min read
+                        ${a.date} &bull; ${Math.ceil(a.content.length / 500)} min read
                     </div>
                 </header>
                 <div class="article-content">${a.content.replace(/\n/g, '<br><br>')}</div>
                 <div class="share-box">
-                    <span>Share:</span>
-                    <i class="fab fa-twitter"></i>
-                    <i class="fab fa-facebook"></i>
-                    <i class="fas fa-link"></i>
+                    <span>Share story:</span>
+                    <button onclick="copyLink()"><i class="fas fa-link"></i> Copy Link</button>
                 </div>
             </article>`;
     },
     adminPanel() {
         return `
             <section class="portal-box">
-                <h1>Publishing Portal</h1>
+                <h1>CMS Portal</h1>
                 <form action="/api/add" method="POST">
-                    <input name="title" placeholder="Story Headline" required>
+                    <input name="title" placeholder="Article Headline" required>
                     <select name="category">
-                        <option>Technology</option><option>Culture</option><option>Business</option><option>Design</option>
+                        <option>Technology</option><option>Business</option><option>Culture</option>
                     </select>
-                    <textarea name="content" rows="15" placeholder="Content starts here..." required></textarea>
-                    <button type="submit">Deploy Article</button>
+                    <textarea name="content" rows="12" placeholder="Start writing..." required></textarea>
+                    <button type="submit">Publish to Production</button>
                 </form>
             </section>`;
     }

@@ -1,7 +1,7 @@
 {
-  "name": "atomic-news-pro",
+  "name": "insight-daily-platform",
   "version": "1.0.0",
-  "description": "ASA Architecture Framework",
+  "description": "High-performance framework-less news engine",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

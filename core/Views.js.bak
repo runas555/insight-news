@@ -10,119 +10,121 @@ module.exports = {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${title} | ASA News</title>
+    <title>${title} | Insight Daily</title>
     ${seoTags}
     ${headContent}
     <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header>
-        <nav class="desktop-nav">
-            <div class="logo"><a href="/"><i class="fas fa-bolt"></i> ASA NEWS</a></div>
-            <div class="nav-actions">
-                <form action="/search" method="GET" class="search-box">
-                    <input name="q" placeholder="Explore stories...">
-                </form>
-                <ul>
-                    <li><a href="/">Feed</a></li>
-                    <li><a href="/admin">Admin</a></li>
-                    <li><a href="/admin/stats">Analytics</a></li>
-                </ul>
+    <div id="progress-bar"></div>
+    <header class="main-header">
+        <nav class="container">
+            <div class="logo"><a href="/">Insight<span>Daily</span></a></div>
+            <div class="nav-links">
+                <a href="/search?q=Technology">Technology</a>
+                <a href="/search?q=Culture">Culture</a>
+                <a href="/search?q=Business">Business</a>
+                <div class="search-trigger" onclick="document.querySelector('.search-overlay').style.display='flex'">
+                    <i class="fas fa-search"></i>
+                </div>
             </div>
         </nav>
     </header>
-    <main class="fade-in">${content}</main>
-    <div class="mobile-tabs">
-        <a href="/"><i class="fas fa-home"></i><span>Home</span></a>
-        <a href="/search"><i class="fas fa-search"></i><span>Search</span></a>
-        <a href="/admin/stats"><i class="fas fa-chart-line"></i><span>Stats</span></a>
-        <a href="/admin"><i class="fas fa-plus-circle"></i><span>Post</span></a>
+
+    <div class="search-overlay">
+        <div class="close-search" onclick="document.querySelector('.search-overlay').style.display='none'">&times;</div>
+        <form action="/search" method="GET">
+            <input name="q" placeholder="What are you looking for?" autofocus>
+        </form>
     </div>
+
+    <main class="container fade-in">${content}</main>
+
+    <footer class="main-footer">
+        <div class="container">
+            <p>&copy; 2024 Insight Daily. Professional Journalism.</p>
+        </div>
+    </footer>
+
+    <div class="mobile-tabs">
+        <a href="/"><i class="fas fa-newspaper"></i><span>Feed</span></a>
+        <a href="/search?q=Tech"><i class="fas fa-microchip"></i><span>Tech</span></a>
+        <a href="/search?q=World"><i class="fas fa-globe-americas"></i><span>World</span></a>
+        <div onclick="document.querySelector('.search-overlay').style.display='flex'"><i class="fas fa-search"></i><span>Search</span></div>
+    </div>
+
+    <script>
+        window.onscroll = function() {
+            let winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            let height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            let scrolled = (winScroll / height) * 100;
+            document.getElementById("progress-bar").style.width = scrolled + "%";
+        };
+    </script>
 </body>
 </html>`;
     },
     articleList(articles) {
-        if (articles.length === 0) return '<div class="no-results"><h3>No stories found.</h3><p>Try different keywords.</p></div>';
+        if (articles.length === 0) return '<div class="empty"><h2>No stories found.</h2><a href="/">Back to Feed</a></div>';
+        
+        // Highlight first article as "Featured"
+        const featured = articles[0];
+        const rest = articles.slice(1);
+
         return `
-            <div class="category-pills">
-                <a href="/" class="pill">All</a>
-                <a href="/search?q=Tech" class="pill">Tech</a>
-                <a href="/search?q=Design" class="pill">Design</a>
-                <a href="/search?q=World" class="pill">World</a>
-            </div>
-            <div class="grid">
-                ${articles.map(a => `
-                <article class="card">
-                    <div class="card-content">
-                        <span class="badge">${a.category}</span>
-                        <h2>${a.title}</h2>
-                        <p>${a.content.substring(0, 120)}...</p>
-                        <div class="meta">
-                            <span><i class="far fa-calendar-alt"></i> ${a.date}</span>
-                            <a href="/article?id=${a.id}" class="read-btn">Read <i class="fas fa-chevron-right"></i></a>
-                        </div>
+            <section class="featured-hero">
+                <div class="badge-featured">Featured Story</div>
+                <h1>${featured.title}</h1>
+                <p>${featured.content.substring(0, 180)}...</p>
+                <a href="/article?id=${featured.id}" class="read-more">Full Story <i class="fas fa-arrow-right"></i></a>
+            </section>
+
+            <div class="section-title">Latest Updates</div>
+            <div class="article-grid">
+                ${rest.map(a => `
+                <article class="news-card">
+                    <span class="category">${a.category}</span>
+                    <h3><a href="/article?id=${a.id}">${a.title}</a></h3>
+                    <div class="meta">
+                        <span>${a.date}</span>
+                        <span class="dot"></span>
+                        <span>${Math.ceil(a.content.length / 500)} min read</span>
                     </div>
                 </article>`).join('')}
             </div>`;
     },
-    statsPage(stats) {
-        const rows = Object.entries(stats).map(([url, count]) => `
-            <tr>
-                <td><code>${url}</code></td>
-                <td><span class="count-tag">${count} views</span></td>
-            </tr>
-        `).join('');
-        return `
-            <section class="admin-stats">
-                <h1><i class="fas fa-chart-bar"></i> Platform Analytics</h1>
-                <table class="stats-table">
-                    <thead><tr><th>Route Path</th><th>Traffic</th></tr></thead>
-                    <tbody>${rows}</tbody>
-                </table>
-                <a href="/admin" class="btn">Return to Editor</a>
-            </section>`;
-    },
     singleArticle(a) {
         return `
-            <div class="full-article">
-                <header class="art-header">
-                    <a href="/" class="back-link"><i class="fas fa-arrow-left"></i> Feed</a>
-                    <span class="badge">${a.category}</span>
+            <article class="reading-view">
+                <header>
+                    <span class="category-tag">${a.category}</span>
                     <h1>${a.title}</h1>
-                    <div class="meta-line">Published on <strong>${a.date}</strong></div>
+                    <div class="article-meta">
+                        By Editor &bull; ${a.date} &bull; ${Math.ceil(a.content.length / 500)} min read
+                    </div>
                 </header>
-                <div class="content-body">${a.content}</div>
-            </div>`;
+                <div class="article-content">${a.content.replace(/\n/g, '<br><br>')}</div>
+                <div class="share-box">
+                    <span>Share:</span>
+                    <i class="fab fa-twitter"></i>
+                    <i class="fab fa-facebook"></i>
+                    <i class="fas fa-link"></i>
+                </div>
+            </article>`;
     },
     adminPanel() {
         return `
-            <section class="admin-form fade-in">
-                <div class="form-header">
-                    <h1><i class="fas fa-feather-alt"></i> Write News</h1>
-                    <p>Standardized ASA Publishing Engine</p>
-                </div>
+            <section class="portal-box">
+                <h1>Publishing Portal</h1>
                 <form action="/api/add" method="POST">
-                    <div class="input-group">
-                        <label>Title</label>
-                        <input name="title" placeholder="Catchy headline" required>
-                    </div>
-                    <div class="input-group">
-                        <label>Category</label>
-                        <select name="category">
-                            <option value="Tech">Tech</option>
-                            <option value="World">World</option>
-                            <option value="Design">Design</option>
-                            <option value="Business">Business</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label>Body Content</label>
-                        <textarea name="content" rows="12" placeholder="Tell the world..." required></textarea>
-                    </div>
-                    <button type="submit" class="btn-submit">
-                        <i class="fas fa-paper-plane"></i> Publish to Feed
-                    </button>
+                    <input name="title" placeholder="Story Headline" required>
+                    <select name="category">
+                        <option>Technology</option><option>Culture</option><option>Business</option><option>Design</option>
+                    </select>
+                    <textarea name="content" rows="15" placeholder="Content starts here..." required></textarea>
+                    <button type="submit">Deploy Article</button>
                 </form>
             </section>`;
     }
