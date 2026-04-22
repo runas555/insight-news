@@ -1,16 +1,19 @@
 const fs = require('fs');
 const path = require('path');
 
-// --- КОНФИГУРАЦИЯ ---
 const DUMP_FILE = 'dump.txt';
 const IGNORE_DIRS = ['node_modules', '.git', '.vercel', '.next'];
-const IGNORE_FILES = [DUMP_FILE, 'setup.cjs', 'package-lock.json', 'struct.txt'];
+const IGNORE_FILES = [DUMP_FILE, 'setup.cjs', 'package-lock.json', '1.cjs'];
+
+const backups = new Map();
+let hasError = false;
+const tasks = [];
 
 /**
- * 1. СБОР ДАННЫХ В DUMP.TXT
+ * 1. СБОР ДАННЫХ (DUMP)
  */
 function createDump() {
-    console.log('\n[1/2] --- ОБНОВЛЕНИЕ DUMP.TXT ---');
+    console.log('--- [1/3] GENERATING DUMP ---');
     let dumpContent = '';
     const walk = (dir) => {
         fs.readdirSync(dir).forEach(file => {
@@ -28,81 +31,119 @@ function createDump() {
     };
     walk(process.cwd());
     fs.writeFileSync(DUMP_FILE, dumpContent);
-    console.log(`[DUMP]: Файл ${DUMP_FILE} обновлен`);
+    console.log(`[OK]: ${DUMP_FILE} updated.`);
 }
 
 /**
- * 2. УМНАЯ ЗАМЕНА С ЯКОРЯМИ
+ * 2. ОПРЕДЕЛЕНИЕ ЗАДАЧ
  */
-function smartReplace(filePath, anchor, replacement, description) {
-    if (!fs.existsSync(filePath)) {
-        console.log(`[FAIL]: ${description} (Файл ${filePath} не найден)`);
-        return;
+function addReplacement(filePath, anchor, replacement, description) {
+    tasks.push({ filePath, anchor, replacement, description });
+}
+
+// --- СПИСОК ИСПРАВЛЕНИЙ ---
+
+// Исправление пути админки и добавление robots.txt в Router.js
+addReplacement(
+    'core/Router.js',
+    "if (parsed.pathname === '/vibe-gate' && method === 'GET')",
+    "if (parsed.pathname === '/robots.txt') {\n        res.writeHead(200, { 'Content-Type': 'text/plain' });\n        return res.end('User-agent: *\\nAllow: /\\nSitemap: https://' + req.headers.host + '/sitemap.xml');\n    }\n\n    if (parsed.pathname === '/admin' && method === 'GET')",
+    "Смена пути на /admin и добавление robots.txt"
+);
+
+// Передача статистики в админку (Router.js)
+addReplacement(
+    'core/Router.js',
+    "return res.end(views.layout('Portal', views.adminPanel()));",
+    "const stats = analytics.getStats();\n        return res.end(views.layout('Admin', views.adminPanel('', stats)));",
+    "Передача данных статистики в AdminPanel"
+);
+
+// Исправление склеенной строки в Router.js
+addReplacement(
+    'core/Router.js',
+    "analytics.track(parsed.pathname);const method = req.method;",
+    "analytics.track(parsed.pathname);\n    const method = req.method;",
+    "Исправление форматирования (разнос строк)"
+);
+
+// Обновление AdminPanel в Views.js (добавление вывода статистики)
+addReplacement(
+    'core/Views.js',
+    "adminPanel(error = '') {",
+    "adminPanel(error = '', stats = {}) {\n        const statsHtml = Object.entries(stats).map(([url, count]) => `<li><code>${url}</code>: <strong>${count}</strong></li>`).join('');",
+    "Добавление логики обработки статистики в Views"
+);
+
+addReplacement(
+    'core/Views.js',
+    "<h2>Publishing Portal</h2>",
+    "<h2>Publishing Portal</h2>\n                    <div class=\"stats-box\"><h3>Quick Stats</h3><ul>${statsHtml || '<li>No data yet</li>'}</ul></div>",
+    "Визуальное добавление блока статистики в админку"
+);
+
+// Добавление стилей для статистики в style.css
+addReplacement(
+    'public/style.css',
+    ".admin-card {",
+    ".stats-box { background: var(--bg); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border); }\n.stats-box h3 { margin-top: 0; font-size: 0.9rem; text-transform: uppercase; color: var(--muted); }\n.stats-box ul { list-style: none; padding: 0; margin: 0; font-size: 0.85rem; }\n.admin-card {",
+    "Стили для блока статистики"
+);
+
+
+/**
+ * 3. ИСПОЛНЕНИЕ С ТРАНЗАКЦИЕЙ
+ */
+function runTransformations() {
+    console.log('\n--- [2/3] APPLYING CHANGES ---');
+    const changedFiles = new Set();
+
+    for (const task of tasks) {
+        if (hasError) break;
+        const { filePath, anchor, replacement, description } = task;
+
+        if (!fs.existsSync(filePath)) {
+            console.log(`[FAIL]: File not found: ${filePath}`);
+            hasError = true; break;
+        }
+
+        if (!changedFiles.has(filePath)) {
+            const original = fs.readFileSync(filePath, 'utf8');
+            backups.set(filePath, original);
+            fs.writeFileSync(filePath + '.bak', original);
+            changedFiles.add(filePath);
+        }
+
+        let content = fs.readFileSync(filePath, 'utf8');
+        const escapedAnchor = anchor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regexStr = escapedAnchor.split(/\s+/).filter(s => s.length > 0).map(s => s + '\\s*').join('');
+        const regex = new RegExp(regexStr, 'm');
+
+        if (regex.test(content)) {
+            fs.writeFileSync(filePath, content.replace(regex, () => replacement));
+            console.log(`[SUCCESS]: ${description}`);
+        } else {
+            console.log(`[FAIL]: Anchor not found for: ${description}`);
+            hasError = true;
+        }
     }
 
-    let content = fs.readFileSync(filePath, 'utf8');
-    
-    // Экранируем символы и создаем гибкую регулярку (игнор пробелов и переносов)
-    const escapedAnchor = anchor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regexStr = escapedAnchor.split(/\s+/).filter(s => s.length > 0).map(s => s + '\\s*').join('');
-    const regex = new RegExp(regexStr, 'm');
-
-    if (regex.test(content)) {
-        const newContent = content.replace(regex, () => replacement);
-        fs.writeFileSync(filePath, newContent);
-        console.log(`[SUCCESS]: ${description}`);
+    console.log('\n--- [3/3] FINALIZING ---');
+    if (hasError) {
+        console.log('[ROLLBACK]: Error detected. Restoring files...');
+        backups.forEach((content, filePath) => {
+            fs.writeFileSync(filePath, content);
+            if (fs.existsSync(filePath + '.bak')) fs.unlinkSync(filePath + '.bak');
+        });
+        console.log('[DONE]: System restored to original state.');
     } else {
-        console.log(`[SKIP]: ${description} (Якорь не найден)`);
+        changedFiles.forEach(filePath => {
+            if (fs.existsSync(filePath + '.bak')) fs.unlinkSync(filePath + '.bak');
+        });
+        console.log('[DONE]: All changes applied successfully. Backups cleared.');
     }
-}
-
-/**
- * 3. ПЕРЕДЕЛКА ПРОЕКТА (УДАЛЕНИЕ ПУБЛИЧНОЙ АДМИНКИ)
- */
-function redoEverything() {
-    console.log('\n[2/2] --- ПЕРЕДЕЛКА ИНТЕРФЕЙСА ---');
-
-    // 1. Скрываем вход в админку из мобильного меню (Views.js)
-    smartReplace(
-        'core/Views.js',
-        `<a href="/manage-portal"><i class="fas fa-user-circle"></i><span>Portal</span></a>`,
-        `<a href="/search?q=Tech"><i class="fas fa-microchip"></i><span>Tech</span></a>`,
-        "Удаление ссылки на Портал из мобильного меню"
-    );
-
-    // 2. Делаем главную страницу более чистой (убираем лишние упоминания)
-    smartReplace(
-        'core/Views.js',
-        `<div class="logo"><a href="/">Insight<span>News</span></a></div>`,
-        `<div class="logo"><a href="/">Insight<span>Daily</span></a></div>`,
-        "Ребрендинг в Insight Daily"
-    );
-
-    // 3. Изменяем роут админки на секретный (Router.js)
-    smartReplace(
-        'core/Router.js',
-        "parsed.pathname === '/manage-portal'",
-        "parsed.pathname === '/vibe-gate'", // Секретный вход
-        "Скрытие URL админки (теперь /vibe-gate)"
-    );
-
-    // 4. Улучшаем CSS для более премиального вида заголовков
-    smartReplace(
-        'public/style.css',
-        ".featured-block h1 { font-family: 'Playfair Display', serif; font-size: 4rem; line-height: 1; margin: 0 0 24px; }",
-        ".featured-block h1 { font-family: 'Playfair Display', serif; font-size: clamp(2.5rem, 8vw, 4.5rem); line-height: 0.95; margin: 0 0 24px; letter-spacing: -2px; }",
-        "Обновление типографики заголовков"
-    );
-
-    // 5. Добавляем "плавное появление" для всех ссылок
-    smartReplace(
-        'public/style.css',
-        "a { text-decoration: none; color: inherit; }",
-        "a { text-decoration: none; color: inherit; transition: opacity 0.2s; }\na:hover { opacity: 0.7; }",
-        "Добавление эффектов наведения"
-    );
 }
 
 // ЗАПУСК
 createDump();
-redoEverything();
+runTransformations();

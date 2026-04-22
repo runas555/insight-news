@@ -11,9 +11,8 @@ module.exports = async (req, res) => {
     const parsed = url.parse(req.url, true);
     const analytics = require('./Analytics');
     const sitemap = require('./Sitemap');
-    analytics.track(parsed.pathname);const method = req.method;
-
-    // PERFORMANCE: Cache-Control for Static Files
+    analytics.track(parsed.pathname);
+    const method = req.method;// PERFORMANCE: Cache-Control for Static Files
     if (parsed.pathname === '/style.css') {
         res.writeHead(200, { 
             'Content-Type': 'text/css',
@@ -53,9 +52,14 @@ module.exports = async (req, res) => {
     }
 
     // PROTECTED ADMIN
-    if (parsed.pathname === '/vibe-gate'&& method === 'GET') {
-        return res.end(views.layout('Portal', views.adminPanel()));
+    if (parsed.pathname === '/robots.txt') {
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        return res.end('User-agent: *\nAllow: /\nSitemap: https://' + req.headers.host + '/sitemap.xml');
     }
+
+    if (parsed.pathname === '/admin' && method === 'GET'){
+        const stats = analytics.getStats();
+        return res.end(views.layout('Admin', views.adminPanel('', stats)));}
 
     if (parsed.pathname === '/api/add' && method === 'POST') {
         let body = '';

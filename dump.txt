@@ -5,117 +5,6 @@
 
 // --- FILE_END: .gitignore ---
 
-// --- FILE_START: 1.cjs ---
-const fs = require('fs');
-const path = require('path');
-
-// --- КОНФИГУРАЦИЯ ---
-const DUMP_FILE = 'dump.txt';
-const IGNORE_DIRS = ['node_modules', '.git', '.vercel', '.next'];
-const IGNORE_FILES = [DUMP_FILE, 'setup.cjs', 'package-lock.json', 'struct.txt'];
-
-/**
- * 1. СБОР ДАННЫХ В DUMP.TXT
- */
-function createDump() {
-    console.log('\n[1/2] --- ОБНОВЛЕНИЕ DUMP.TXT ---');
-    let dumpContent = '';
-    const walk = (dir) => {
-        fs.readdirSync(dir).forEach(file => {
-            const fullPath = path.join(dir, file);
-            const relPath = path.relative(process.cwd(), fullPath);
-            if (fs.statSync(fullPath).isDirectory()) {
-                if (!IGNORE_DIRS.includes(file)) walk(fullPath);
-            } else if (!IGNORE_FILES.includes(file) && !file.endsWith('.bak')) {
-                try {
-                    const content = fs.readFileSync(fullPath, 'utf8');
-                    dumpContent += `\n// --- FILE_START: ${relPath} ---\n${content}\n// --- FILE_END: ${relPath} ---\n`;
-                } catch (e) {}
-            }
-        });
-    };
-    walk(process.cwd());
-    fs.writeFileSync(DUMP_FILE, dumpContent);
-    console.log(`[DUMP]: Файл ${DUMP_FILE} обновлен`);
-}
-
-/**
- * 2. УМНАЯ ЗАМЕНА С ЯКОРЯМИ
- */
-function smartReplace(filePath, anchor, replacement, description) {
-    if (!fs.existsSync(filePath)) {
-        console.log(`[FAIL]: ${description} (Файл ${filePath} не найден)`);
-        return;
-    }
-
-    let content = fs.readFileSync(filePath, 'utf8');
-    
-    // Экранируем символы и создаем гибкую регулярку (игнор пробелов и переносов)
-    const escapedAnchor = anchor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regexStr = escapedAnchor.split(/\s+/).filter(s => s.length > 0).map(s => s + '\\s*').join('');
-    const regex = new RegExp(regexStr, 'm');
-
-    if (regex.test(content)) {
-        const newContent = content.replace(regex, () => replacement);
-        fs.writeFileSync(filePath, newContent);
-        console.log(`[SUCCESS]: ${description}`);
-    } else {
-        console.log(`[SKIP]: ${description} (Якорь не найден)`);
-    }
-}
-
-/**
- * 3. ПЕРЕДЕЛКА ПРОЕКТА (УДАЛЕНИЕ ПУБЛИЧНОЙ АДМИНКИ)
- */
-function redoEverything() {
-    console.log('\n[2/2] --- ПЕРЕДЕЛКА ИНТЕРФЕЙСА ---');
-
-    // 1. Скрываем вход в админку из мобильного меню (Views.js)
-    smartReplace(
-        'core/Views.js',
-        `<a href="/manage-portal"><i class="fas fa-user-circle"></i><span>Portal</span></a>`,
-        `<a href="/search?q=Tech"><i class="fas fa-microchip"></i><span>Tech</span></a>`,
-        "Удаление ссылки на Портал из мобильного меню"
-    );
-
-    // 2. Делаем главную страницу более чистой (убираем лишние упоминания)
-    smartReplace(
-        'core/Views.js',
-        `<div class="logo"><a href="/">Insight<span>News</span></a></div>`,
-        `<div class="logo"><a href="/">Insight<span>Daily</span></a></div>`,
-        "Ребрендинг в Insight Daily"
-    );
-
-    // 3. Изменяем роут админки на секретный (Router.js)
-    smartReplace(
-        'core/Router.js',
-        "parsed.pathname === '/manage-portal'",
-        "parsed.pathname === '/vibe-gate'", // Секретный вход
-        "Скрытие URL админки (теперь /vibe-gate)"
-    );
-
-    // 4. Улучшаем CSS для более премиального вида заголовков
-    smartReplace(
-        'public/style.css',
-        ".featured-block h1 { font-family: 'Playfair Display', serif; font-size: 4rem; line-height: 1; margin: 0 0 24px; }",
-        ".featured-block h1 { font-family: 'Playfair Display', serif; font-size: clamp(2.5rem, 8vw, 4.5rem); line-height: 0.95; margin: 0 0 24px; letter-spacing: -2px; }",
-        "Обновление типографики заголовков"
-    );
-
-    // 5. Добавляем "плавное появление" для всех ссылок
-    smartReplace(
-        'public/style.css',
-        "a { text-decoration: none; color: inherit; }",
-        "a { text-decoration: none; color: inherit; transition: opacity 0.2s; }\na:hover { opacity: 0.7; }",
-        "Добавление эффектов наведения"
-    );
-}
-
-// ЗАПУСК
-createDump();
-redoEverything();
-// --- FILE_END: 1.cjs ---
-
 // --- FILE_START: core\Analytics.js ---
 
 const fs = require('fs');
@@ -232,7 +121,7 @@ module.exports = async (req, res) => {
     }
 
     // PROTECTED ADMIN
-    if (parsed.pathname === '/manage-portal' && method === 'GET') {
+    if (parsed.pathname === '/vibe-gate'&& method === 'GET') {
         return res.end(views.layout('Portal', views.adminPanel()));
     }
 
@@ -344,8 +233,7 @@ module.exports = {
     <div id="progress-bar"></div>
     <header class="main-header">
         <nav class="container">
-            <div class="logo"><a href="/">Insight<span>News</span></a></div>
-            <div class="nav-right">
+            <div class="logo"><a href="/">Insight<span>Daily</span></a></div><div class="nav-right">
                 <a href="/search?q=Tech" class="nav-link">Tech</a>
                 <a href="/search?q=Design" class="nav-link">Design</a>
                 <button class="icon-btn" onclick="toggleSearch()"><i class="fas fa-search"></i></button>
@@ -366,8 +254,7 @@ module.exports = {
     <div class="mobile-tabs">
         <a href="/"><i class="fas fa-layer-group"></i><span>Feed</span></a>
         <a href="/search?q=Trending"><i class="fas fa-bolt"></i><span>Hot</span></a>
-        <a href="/manage-portal"><i class="fas fa-user-circle"></i><span>Portal</span></a>
-    </div>
+        <a href="/search?q=Tech"><i class="fas fa-microchip"></i><span>Tech</span></a></div>
 
     <script>
         function toggleSearch() {
@@ -478,13 +365,15 @@ module.exports = {
 
 // --- FILE_START: data\stats.json ---
 {
-  "/search": 16,
-  "/.well-known/appspecific/com.chrome.devtools.json": 47,
-  "/style.css": 47,
-  "/": 21,
-  "/article": 6,
-  "/admin": 2,
-  "/admin/stats": 2
+  "/search": 18,
+  "/.well-known/appspecific/com.chrome.devtools.json": 64,
+  "/style.css": 57,
+  "/": 27,
+  "/article": 8,
+  "/admin": 3,
+  "/admin/stats": 2,
+  "/admin/index.html": 2,
+  "/admin/": 2
 }
 // --- FILE_END: data\stats.json ---
 
@@ -562,9 +451,8 @@ body { font-family: 'Inter', system-ui, sans-serif; margin: 0; background: var(-
 
 .featured-block { padding: 80px 0; border-bottom: 4px solid var(--text); margin-bottom: 50px; }
 .featured-label { font-weight: 800; text-transform: uppercase; color: var(--red); font-size: 0.75rem; letter-spacing: 2px; margin-bottom: 16px; }
-.featured-block h1 { font-family: 'Playfair Display', serif; font-size: 4rem; line-height: 1; margin: 0 0 24px; }
-.featured-block h1 a { text-decoration: none; color: inherit; }
-.featured-block p { font-size: 1.25rem; color: var(--muted); max-width: 800px; }
+.featured-block h1 { font-family: 'Playfair Display', serif; font-size: clamp(2.5rem, 8vw, 4.5rem); line-height: 0.95; margin: 0 0 24px; letter-spacing: -2px; }.featured-block h1 a { text-decoration: none; color: inherit; transition: opacity 0.2s; }
+a:hover { opacity: 0.7; }.featured-block p { font-size: 1.25rem; color: var(--muted); max-width: 800px; }
 
 .news-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; }
 .news-item { border-top: 1px solid var(--border); padding-top: 24px; }
@@ -639,6 +527,31 @@ A high-performance, framework-less news engine built on **Atomic Stream Architec
 This repository is verified for **runas555**. The `.vibetalent` file is located in the root directory.
 
 // --- FILE_END: README.md ---
+
+// --- FILE_START: struct.txt ---
+├── core
+│   ├── Analytics.js
+│   ├── DB.js
+│   ├── DB.js.bak
+│   ├── Deploy.js
+│   ├── Router.js
+│   ├── SEO.js
+│   ├── Sitemap.js
+│   └── Views.js
+├── data
+│   ├── articles.json
+│   ├── articles.json.bak
+│   └── stats.json
+├── public
+│   └── style.css
+├── .gitignore
+├── 1.cjs
+├── index.js
+├── package.json
+├── README.md
+└── vercel.json
+
+// --- FILE_END: struct.txt ---
 
 // --- FILE_START: vercel.json ---
 {

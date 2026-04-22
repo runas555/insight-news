@@ -110,12 +110,12 @@ module.exports = {
                 </footer>
             </article>`;
     },
-    adminPanel(error = '') {
-        return `
+    adminPanel(error = '', stats = {}) {
+        const statsHtml = Object.entries(stats).map(([url, count]) => `<li><code>${url}</code>: <strong>${count}</strong></li>`).join('');return `
             <div class="admin-wrapper">
                 <div class="admin-card">
                     <h2>Publishing Portal</h2>
-                    ${error ? `<p class="error">${error}</p>` : ''}
+                    <div class="stats-box"><h3>Quick Stats</h3><ul>${statsHtml || '<li>No data yet</li>'}</ul></div>${error ? `<p class="error">${error}</p>` : ''}
                     <form action="/api/add" method="POST">
                         <input type="password" name="pin" placeholder="Enter Security PIN" required>
                         <hr>

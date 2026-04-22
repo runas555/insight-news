@@ -1,11 +1,11 @@
 {
-  "/search": 18,
-  "/.well-known/appspecific/com.chrome.devtools.json": 63,
-  "/style.css": 56,
-  "/": 26,
+  "/search": 21,
+  "/.well-known/appspecific/com.chrome.devtools.json": 73,
+  "/style.css": 65,
+  "/": 31,
   "/article": 8,
-  "/admin": 3,
+  "/admin": 4,
   "/admin/stats": 2,
-  "/admin/index.html": 2,
+  "/admin/index.html": 3,
   "/admin/": 2
 }
