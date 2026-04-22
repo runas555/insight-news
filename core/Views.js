@@ -118,6 +118,16 @@ module.exports = {
             document.getElementById("progress-bar").style.width = scrolled + "%";
         };
     </script>
+
+    <div id="scroll-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+        <i class="fas fa-chevron-up"></i>
+    </div>
+    <script>
+        window.addEventListener('scroll', () => {
+            const btn = document.getElementById('scroll-top');
+            btn.style.display = window.scrollY > 500 ? 'flex' : 'none';
+        });
+    </script>
 </body>
 </html>`;
     },

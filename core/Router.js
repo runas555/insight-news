@@ -3,15 +3,29 @@ const url = require('url');
 const db = require('./DB');
 const views = require('./Views');
 const analytics = require('./Analytics');
+const sitemap = require('./Sitemap');
 const fs = require('fs');
 const path = require('path');
 
 module.exports = async (req, res) => {
     const parsed = url.parse(req.url, true);
     const method = req.method;
+    const host = req.headers.host;
 
     analytics.track(parsed.pathname);
 
+    // SEO Static Routes
+    if (parsed.pathname === '/sitemap.xml') {
+        res.writeHead(200, { 'Content-Type': 'application/xml' });
+        return res.end(sitemap.generate(host));
+    }
+
+    if (parsed.pathname === '/robots.txt') {
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        return res.end(`User-agent: *\nAllow: /\nSitemap: https://${host}/sitemap.xml`);
+    }
+
+    // Public Routes
     if (parsed.pathname === '/' && method === 'GET') {
         const articles = [...db.getArticles()].reverse();
         const html = views.layout('Fresh Feed', views.articleList(articles));
@@ -35,11 +49,7 @@ module.exports = async (req, res) => {
         return res.end(html);
     }
 
-    if (parsed.pathname === '/api/subscribe' && method === 'POST') {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify({ success: true }));
-    }
-
+    // Hidden CMS
     if (parsed.pathname === '/manage-portal' && method === 'GET') {
         const html = views.layout('CMS Access', views.adminPanel());
         res.writeHead(200, { 'Content-Type': 'text/html' });
