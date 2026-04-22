@@ -126,12 +126,16 @@ module.exports = {
                     <a href="/admin/edit?id=${a.id}" class="edit-link"><i class="fas fa-edit"></i></a>
                     <a href="/api/delete?id=${a.id}" class="del-link" onclick="return confirm('Delete?')"><i class="fas fa-trash"></i></a>
                 </div>
-            </div>`).join('');const statsHtml = Object.entries(stats).map(([url, count]) => `<li><code>${url}</code>: <strong>${count}</strong></li>`).join('');return `
+            </div>`).join('');const totalViews = Object.values(stats).reduce((a, b) => a + b, 0);
+        const totalArticles = articles.length;return `
             <div class="admin-wrapper">
                 <div class="admin-card">
                     <h2>Publishing Portal</h2>
-                    <div class="stats-box"><h3>Quick Stats</h3><ul>${statsHtml || '<li>No data yet</li>'}</ul></div>
-                    <div class="manage-box"><h3>Manage Content</h3>${articleRows}</div>${error ? `<p class="error">${error}</p>` : ''}
+                    <div class="dashboard-grid">
+                        <div class="dash-card"><span>Total Articles</span><strong>${totalArticles}</strong></div>
+                        <div class="dash-card"><span>Total Views</span><strong>${totalViews}</strong></div>
+                        <div class="dash-card"><span>System Status</span><strong class="status-ok">Active</strong></div>
+                    </div><div class="manage-box"><h3>Manage Content</h3>${articleRows}</div>${error ? `<p class="error">${error}</p>` : ''}
                     <form action="/api/add" method="POST">
                         <input name="title" placeholder="Article Headline" required>
                         <input name="category" placeholder="Category (e.g. Tech)">

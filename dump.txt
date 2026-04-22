@@ -50,6 +50,18 @@ module.exports = {
         art.id = Date.now();
         data.push(art);
         fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+    },
+    deleteArticle(id) {
+        const data = this.getArticles().filter(a => a.id != id);
+        fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+    },
+    updateArticle(id, updated) {
+        const data = this.getArticles();
+        const index = data.findIndex(a => a.id == id);
+        if (index !== -1) {
+            data[index] = { ...data[index], ...updated };
+            fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+        }
     }
 };
 // --- FILE_END: core\DB.js ---
@@ -129,8 +141,19 @@ module.exports = async(req, res) => {
         return res.end('User-agent: *\nAllow: /\nSitemap: https://' + req.headers.host + '/sitemap.xml');
     }
 
-    if (parsed.pathname === '/admin' && method === 'GET') {
+    if (parsed.pathname === '/admin/edit' && method === 'GET') {
         if (!checkAuth(req)) return res.end(views.layout('Login', views.adminLogin()));
+        const article = db.getArticleById(parsed.query.id);
+        return res.end(views.layout('Edit Article', views.editPanel(article)));
+    }
+
+    if (parsed.pathname === '/api/delete' && checkAuth(req)) {
+        db.deleteArticle(parsed.query.id);
+        res.writeHead(302, { Location: '/admin' });
+        return res.end();
+    }
+
+    if (parsed.pathname === '/admin' && method === 'GET') {if (!checkAuth(req)) return res.end(views.layout('Login', views.adminLogin()));
         const stats = analytics.getStats();return res.end(views.layout('Admin', views.adminPanel('', stats)));
     }if (parsed.pathname === '/api/login' && method === 'POST') {
         let body = '';
@@ -167,7 +190,21 @@ module.exports = async(req, res) => {
         return;
     }
 
-    res.writeHead(404);
+    if (parsed.pathname === '/api/edit' && method === 'POST' && checkAuth(req)) {
+        let body = '';
+        req.on('data', c => body += c);
+        req.on('end', () => {
+            const p = new URLSearchParams(body);
+            db.updateArticle(p.get('id'), {
+                title: p.get('title'),
+                content: p.get('content'),
+                category: p.get('category')
+            });
+            res.writeHead(302, { Location: '/admin' });
+            res.end();
+        });
+        return;
+    }res.writeHead(404);
     res.end('404 Not Found');
 };
 // --- FILE_END: core\Router.js ---
@@ -347,11 +384,24 @@ module.exports = {
         return `<div class="admin-wrapper"><div class="admin-card"><h2>Management Login</h2><form action="/api/login" method="POST"><input type="text" name="user" placeholder="Username" required>
                         <input type="password" name="pass" placeholder="Password" required><button type="submit">Login</button></form></div></div>`;
     },
-    adminPanel(error = '', stats = {}) {const statsHtml = Object.entries(stats).map(([url, count]) => `<li><code>${url}</code>: <strong>${count}</strong></li>`).join('');return `
+    editPanel(a) {
+        return `<div class="admin-wrapper"><div class="admin-card"><h2>Edit Article</h2><form action="/api/edit" method="POST"><input type="hidden" name="id" value="${a.id}"><input name="title" value="${a.title}" required><input name="category" value="${a.category}"><textarea name="content" rows="12" required>${a.content}</textarea><button type="submit">Save Changes</button><a href="/admin" class="btn-cancel">Cancel</a></form></div></div>`;
+    },
+    adminPanel(error = '', stats = {}) {
+        const articles = require('./DB').getArticles();
+        const articleRows = articles.map(a => `
+            <div class="manage-item">
+                <span>${a.title}</span>
+                <div class="actions">
+                    <a href="/admin/edit?id=${a.id}" class="edit-link"><i class="fas fa-edit"></i></a>
+                    <a href="/api/delete?id=${a.id}" class="del-link" onclick="return confirm('Delete?')"><i class="fas fa-trash"></i></a>
+                </div>
+            </div>`).join('');const statsHtml = Object.entries(stats).map(([url, count]) => `<li><code>${url}</code>: <strong>${count}</strong></li>`).join('');return `
             <div class="admin-wrapper">
                 <div class="admin-card">
                     <h2>Publishing Portal</h2>
-                    <div class="stats-box"><h3>Quick Stats</h3><ul>${statsHtml || '<li>No data yet</li>'}</ul></div>${error ? `<p class="error">${error}</p>` : ''}
+                    <div class="stats-box"><h3>Quick Stats</h3><ul>${statsHtml || '<li>No data yet</li>'}</ul></div>
+                    <div class="manage-box"><h3>Manage Content</h3>${articleRows}</div>${error ? `<p class="error">${error}</p>` : ''}
                     <form action="/api/add" method="POST">
                         <input name="title" placeholder="Article Headline" required>
                         <input name="category" placeholder="Category (e.g. Tech)">
@@ -379,25 +429,18 @@ module.exports = {
     "content": "Atomic Stream Architecture focuses on raw, zero-overhead delivery of content. By bypassing heavy frameworks and focusing on the core HTTP module, developers can achieve sub-10ms response times globally. This shift marks a return to the foundational roots of the web.",
     "category": "Technology",
     "date": "October 27"
-  },
-  {
-    "title": "4343",
-    "content": "43434",
-    "category": "Электроника",
-    "date": "Apr 22, 2026",
-    "id": 1776852911616
   }
 ]
 // --- FILE_END: data\articles.json ---
 
 // --- FILE_START: data\stats.json ---
 {
-  "/search": 23,
+  "/search": 24,
   "/.well-known/appspecific/com.chrome.devtools.json": 73,
   "/style.css": 65,
   "/": 38,
   "/article": 8,
-  "/admin": 13,
+  "/admin": 16,
   "/admin/stats": 2,
   "/admin/index.html": 3,
   "/admin/": 2
@@ -514,6 +557,13 @@ a:hover { opacity: 0.7; }.featured-block p { font-size: 1.25rem; color: var(--mu
 .stats-box { background: var(--bg); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border); }
 .stats-box h3 { margin-top: 0; font-size: 0.9rem; text-transform: uppercase; color: var(--muted); }
 .stats-box ul { list-style: none; padding: 0; margin: 0; font-size: 0.85rem; }
+.manage-box { margin-top: 30px; border-top: 1px solid var(--border); padding-top: 20px; }
+.manage-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+.manage-item span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%; }
+.actions { display: flex; gap: 15px; }
+.edit-link { color: var(--muted); }
+.del-link { color: var(--red); }
+.btn-cancel { display: block; text-align: center; margin-top: 10px; font-size: 0.8rem; color: var(--muted); }
 .admin-card {background: var(--hero); padding: 40px; border-radius: 24px; width: 100%; max-width: 600px; }
 .admin-card input, .admin-card textarea { width: 100%; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); color: var(--text); font-family: inherit; }
 .admin-card button { width: 100%; padding: 18px; background: var(--text); color: var(--bg); border: none; border-radius: 12px; font-weight: 800; cursor: pointer; }

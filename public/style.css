@@ -52,10 +52,11 @@ a:hover { opacity: 0.7; }.featured-block p { font-size: 1.25rem; color: var(--mu
 .mobile-tabs i { font-size: 1.4rem; margin-bottom: 4px; display: block; }
 
 .admin-wrapper { display: flex; justify-content: center; padding: 60px 0; }
-.stats-box { background: var(--bg); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border); }
-.stats-box h3 { margin-top: 0; font-size: 0.9rem; text-transform: uppercase; color: var(--muted); }
-.stats-box ul { list-style: none; padding: 0; margin: 0; font-size: 0.85rem; }
-.manage-box { margin-top: 30px; border-top: 1px solid var(--border); padding-top: 20px; }
+.dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 30px; }
+.dash-card { background: var(--bg); padding: 20px; border-radius: 16px; border: 1px solid var(--border); text-align: center; }
+.dash-card span { display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--muted); font-weight: 800; margin-bottom: 8px; letter-spacing: 1px; }
+.dash-card strong { font-size: 1.8rem; font-family: 'Playfair Display', serif; display: block; }
+.status-ok { color: #10b981; }.manage-box { margin-top: 30px; border-top: 1px solid var(--border); padding-top: 20px; }
 .manage-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
 .manage-item span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%; }
 .actions { display: flex; gap: 15px; }
@@ -70,7 +71,7 @@ a:hover { opacity: 0.7; }.featured-block p { font-size: 1.25rem; color: var(--mu
 @keyframes fadeIn { from { opacity: 0; transform: scale(1.05); } to { opacity: 1; transform: scale(1); } }
 @media (max-width: 1024px) { .news-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 768px) {
-    .nav-link { display: none; }
+    .dashboard-grid { grid-template-columns: 1fr; }.nav-link { display: none; }
     .mobile-tabs { display: flex; }
     .featured-block h1 { font-size: 2.5rem; }
     .news-grid { grid-template-columns: 1fr; gap: 30px; }
