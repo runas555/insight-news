@@ -110,15 +110,15 @@ module.exports = {
                 </footer>
             </article>`;
     },
-    adminPanel(error = '', stats = {}) {
-        const statsHtml = Object.entries(stats).map(([url, count]) => `<li><code>${url}</code>: <strong>${count}</strong></li>`).join('');return `
+    adminLogin(error = '') {
+        return `<div class="admin-wrapper"><div class="admin-card"><h2>Admin Access</h2><form action="/api/login" method="POST"><input type="password" name="pin" placeholder="Enter Security PIN" required><button type="submit">Login</button></form></div></div>`;
+    },
+    adminPanel(error = '', stats = {}) {const statsHtml = Object.entries(stats).map(([url, count]) => `<li><code>${url}</code>: <strong>${count}</strong></li>`).join('');return `
             <div class="admin-wrapper">
                 <div class="admin-card">
                     <h2>Publishing Portal</h2>
                     <div class="stats-box"><h3>Quick Stats</h3><ul>${statsHtml || '<li>No data yet</li>'}</ul></div>${error ? `<p class="error">${error}</p>` : ''}
                     <form action="/api/add" method="POST">
-                        <input type="password" name="pin" placeholder="Enter Security PIN" required>
-                        <hr>
                         <input name="title" placeholder="Article Headline" required>
                         <input name="category" placeholder="Category (e.g. Tech)">
                         <textarea name="content" rows="12" placeholder="Start writing your story..." required></textarea>

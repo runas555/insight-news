@@ -5,13 +5,17 @@ const views = require('./Views');
 const fs = require('fs');
 const path = require('path');
 
-const ADMIN_PIN = "1234"; 
+const ADMIN_PIN = "1234";
+const checkAuth = (req) => (req.headers.cookie || '').includes('auth=asa-admin');
 
-module.exports = async (req, res) => {
+module.exports = async(req, res) => {
     const parsed = url.parse(req.url, true);
     const analytics = require('./Analytics');
     const sitemap = require('./Sitemap');
-    analytics.track(parsed.pathname);
+    const isStatic = parsed.pathname.includes('.');
+    if (!isStatic && !parsed.pathname.startsWith('/api')) {
+        analytics.track(parsed.pathname);
+    }
     const method = req.method;// PERFORMANCE: Cache-Control for Static Files
     if (parsed.pathname === '/style.css') {
         res.writeHead(200, { 
@@ -57,22 +61,33 @@ module.exports = async (req, res) => {
         return res.end('User-agent: *\nAllow: /\nSitemap: https://' + req.headers.host + '/sitemap.xml');
     }
 
-    if (parsed.pathname === '/admin' && method === 'GET'){
-        const stats = analytics.getStats();
-        return res.end(views.layout('Admin', views.adminPanel('', stats)));}
-
-    if (parsed.pathname === '/api/add' && method === 'POST') {
+    if (parsed.pathname === '/admin' && method === 'GET') {
+        if (!checkAuth(req)) return res.end(views.layout('Login', views.adminLogin()));
+        const stats = analytics.getStats();return res.end(views.layout('Admin', views.adminPanel('', stats)));
+    }if (parsed.pathname === '/api/login' && method === 'POST') {
         let body = '';
+        req.on('data', c => body += c);
+        req.on('end', () => {
+            const p = new URLSearchParams(body);
+            if (p.get('pin') === ADMIN_PIN) {
+                res.writeHead(302, { 'Set-Cookie': 'auth=asa-admin; Path=/; HttpOnly', 'Location': '/admin' });
+            } else {
+                res.writeHead(302, { 'Location': '/admin?error=1' });
+            }
+            res.end();
+        });
+        return;
+    }
+
+    if (parsed.pathname === '/api/add' && method === 'POST') {let body = '';
         req.on('data', c => body += c);
         req.on('end', () => {
             const p = new URLSearchParams(body);
             
             // Security Check
-            if (p.get('pin') !== ADMIN_PIN) {
-                return res.end(views.layout('Portal', views.adminPanel('Invalid Security PIN')));
-            }
-
-            db.saveArticle({
+            if (!checkAuth(req)) {
+                return res.end(views.layout('Login', views.adminLogin('Unauthorized access')));
+            }db.saveArticle({
                 title: p.get('title'),
                 content: p.get('content'),
                 category: p.get('category') || 'General',

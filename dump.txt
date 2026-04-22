@@ -73,15 +73,15 @@ const views = require('./Views');
 const fs = require('fs');
 const path = require('path');
 
-const ADMIN_PIN = "1234"; 
-
-module.exports = async (req, res) => {
+const ADMIN_PIN = "1234";
+const checkAuth = (req) => (req.headers.cookie || '').includes('auth=asa-admin');module.exports = async (req, res) => {
     const parsed = url.parse(req.url, true);
     const analytics = require('./Analytics');
     const sitemap = require('./Sitemap');
-    analytics.track(parsed.pathname);const method = req.method;
-
-    // PERFORMANCE: Cache-Control for Static Files
+    const isStatic = parsed.pathname.includes('.');
+    if (!isStatic && !parsed.pathname.startsWith('/api')) {
+        analytics.track(parsed.pathname);
+    }const method = req.method;// PERFORMANCE: Cache-Control for Static Files
     if (parsed.pathname === '/style.css') {
         res.writeHead(200, { 
             'Content-Type': 'text/css',
@@ -121,19 +121,38 @@ module.exports = async (req, res) => {
     }
 
     // PROTECTED ADMIN
-    if (parsed.pathname === '/vibe-gate'&& method === 'GET') {
-        return res.end(views.layout('Portal', views.adminPanel()));
+    if (parsed.pathname === '/robots.txt') {
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        return res.end('User-agent: *\nAllow: /\nSitemap: https://' + req.headers.host + '/sitemap.xml');
     }
 
-    if (parsed.pathname === '/api/add' && method === 'POST') {
+    if (parsed.pathname === '/admin' && method === 'GET') {
+        if (!checkAuth(req)) return res.end(views.layout('Login', views.adminLogin()));
+        const stats = analytics.getStats();const stats = analytics.getStats();
+        return res.end(views.layout('Admin', views.adminPanel('', stats)));}
+
+    if (parsed.pathname === '/api/login' && method === 'POST') {
         let body = '';
+        req.on('data', c => body += c);
+        req.on('end', () => {
+            const p = new URLSearchParams(body);
+            if (p.get('pin') === ADMIN_PIN) {
+                res.writeHead(302, { 'Set-Cookie': 'auth=asa-admin; Path=/; HttpOnly', 'Location': '/admin' });
+            } else {
+                res.writeHead(302, { 'Location': '/admin?error=1' });
+            }
+            res.end();
+        });
+        return;
+    }
+
+    if (parsed.pathname === '/api/add' && method === 'POST') {let body = '';
         req.on('data', c => body += c);
         req.on('end', () => {
             const p = new URLSearchParams(body);
             
             // Security Check
-            if (p.get('pin') !== ADMIN_PIN) {
-                return res.end(views.layout('Portal', views.adminPanel('Invalid Security PIN')));
+            if (!checkAuth(req)) {return res.end(views.layout('Portal', views.adminPanel('Invalid Security PIN')));
             }
 
             db.saveArticle({
@@ -324,15 +343,15 @@ module.exports = {
                 </footer>
             </article>`;
     },
-    adminPanel(error = '') {
-        return `
+    adminLogin(error = '') {
+        return `<div class="admin-wrapper"><div class="admin-card"><h2>Admin Access</h2><form action="/api/login" method="POST"><input type="password" name="pin" placeholder="Enter Security PIN" required><button type="submit">Login</button></form></div></div>`;
+    },
+    adminPanel(error = '', stats = {}) {const statsHtml = Object.entries(stats).map(([url, count]) => `<li><code>${url}</code>: <strong>${count}</strong></li>`).join('');return `
             <div class="admin-wrapper">
                 <div class="admin-card">
                     <h2>Publishing Portal</h2>
-                    ${error ? `<p class="error">${error}</p>` : ''}
+                    <div class="stats-box"><h3>Quick Stats</h3><ul>${statsHtml || '<li>No data yet</li>'}</ul></div>${error ? `<p class="error">${error}</p>` : ''}
                     <form action="/api/add" method="POST">
-                        <input type="password" name="pin" placeholder="Enter Security PIN" required>
-                        <hr>
                         <input name="title" placeholder="Article Headline" required>
                         <input name="category" placeholder="Category (e.g. Tech)">
                         <textarea name="content" rows="12" placeholder="Start writing your story..." required></textarea>
@@ -365,14 +384,14 @@ module.exports = {
 
 // --- FILE_START: data\stats.json ---
 {
-  "/search": 18,
-  "/.well-known/appspecific/com.chrome.devtools.json": 64,
-  "/style.css": 57,
-  "/": 27,
+  "/search": 21,
+  "/.well-known/appspecific/com.chrome.devtools.json": 73,
+  "/style.css": 65,
+  "/": 31,
   "/article": 8,
-  "/admin": 3,
+  "/admin": 5,
   "/admin/stats": 2,
-  "/admin/index.html": 2,
+  "/admin/index.html": 3,
   "/admin/": 2
 }
 // --- FILE_END: data\stats.json ---
@@ -484,7 +503,10 @@ a:hover { opacity: 0.7; }.featured-block p { font-size: 1.25rem; color: var(--mu
 .mobile-tabs i { font-size: 1.4rem; margin-bottom: 4px; display: block; }
 
 .admin-wrapper { display: flex; justify-content: center; padding: 60px 0; }
-.admin-card { background: var(--hero); padding: 40px; border-radius: 24px; width: 100%; max-width: 600px; }
+.stats-box { background: var(--bg); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border); }
+.stats-box h3 { margin-top: 0; font-size: 0.9rem; text-transform: uppercase; color: var(--muted); }
+.stats-box ul { list-style: none; padding: 0; margin: 0; font-size: 0.85rem; }
+.admin-card {background: var(--hero); padding: 40px; border-radius: 24px; width: 100%; max-width: 600px; }
 .admin-card input, .admin-card textarea { width: 100%; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); color: var(--text); font-family: inherit; }
 .admin-card button { width: 100%; padding: 18px; background: var(--text); color: var(--bg); border: none; border-radius: 12px; font-weight: 800; cursor: pointer; }
 .error { color: var(--red); font-weight: 700; }

@@ -41,61 +41,53 @@ function addReplacement(filePath, anchor, replacement, description) {
     tasks.push({ filePath, anchor, replacement, description });
 }
 
-// --- СПИСОК ИСПРАВЛЕНИЙ ---
+// --- ИСПРАВЛЕНИЯ ОШИБОК ---
 
-// Исправление пути админки и добавление robots.txt в Router.js
+// ИСПРАВЛЕНИЕ ГЛАВНОЙ ОШИБКИ: Дублирование переменной stats
 addReplacement(
     'core/Router.js',
-    "if (parsed.pathname === '/vibe-gate' && method === 'GET')",
-    "if (parsed.pathname === '/robots.txt') {\n        res.writeHead(200, { 'Content-Type': 'text/plain' });\n        return res.end('User-agent: *\\nAllow: /\\nSitemap: https://' + req.headers.host + '/sitemap.xml');\n    }\n\n    if (parsed.pathname === '/admin' && method === 'GET')",
-    "Смена пути на /admin и добавление robots.txt"
+    "const stats = analytics.getStats(); const stats = analytics.getStats();",
+    "const stats = analytics.getStats();",
+    "Удаление дубликата переменной 'stats'"
 );
 
-// Передача статистики в админку (Router.js)
+// Исправление слипшегося экспорта
 addReplacement(
     'core/Router.js',
-    "return res.end(views.layout('Portal', views.adminPanel()));",
-    "const stats = analytics.getStats();\n        return res.end(views.layout('Admin', views.adminPanel('', stats)));",
-    "Передача данных статистики в AdminPanel"
+    "auth=asa-admin');module.exports = async",
+    "auth=asa-admin');\n\nmodule.exports = async",
+    "Разделение checkAuth и module.exports"
 );
 
-// Исправление склеенной строки в Router.js
+// Исправление слипшегося метода и аналитики
 addReplacement(
     'core/Router.js',
-    "analytics.track(parsed.pathname);const method = req.method;",
-    "analytics.track(parsed.pathname);\n    const method = req.method;",
-    "Исправление форматирования (разнос строк)"
+    "analytics.track(parsed.pathname); }const method = req.method;",
+    "analytics.track(parsed.pathname);\n    }\n    const method = req.method;",
+    "Разделение блока аналитики и переменной method"
 );
 
-// Обновление AdminPanel в Views.js (добавление вывода статистики)
+// Исправление слипшегося закрытия блока /admin
 addReplacement(
-    'core/Views.js',
-    "adminPanel(error = '') {",
-    "adminPanel(error = '', stats = {}) {\n        const statsHtml = Object.entries(stats).map(([url, count]) => `<li><code>${url}</code>: <strong>${count}</strong></li>`).join('');",
-    "Добавление логики обработки статистики в Views"
+    'core/Router.js',
+    "views.adminPanel('', stats)));}",
+    "views.adminPanel('', stats)));\n    }",
+    "Исправление форматирования блока /admin"
 );
 
+// Исправление логики ошибки в /api/add (чтобы вела на Login, если нет прав)
 addReplacement(
-    'core/Views.js',
-    "<h2>Publishing Portal</h2>",
-    "<h2>Publishing Portal</h2>\n                    <div class=\"stats-box\"><h3>Quick Stats</h3><ul>${statsHtml || '<li>No data yet</li>'}</ul></div>",
-    "Визуальное добавление блока статистики в админку"
+    'core/Router.js',
+    "if (!checkAuth(req)) {return res.end(views.layout('Portal', views.adminPanel('Invalid Security PIN'))); }",
+    "if (!checkAuth(req)) {\n                return res.end(views.layout('Login', views.adminLogin('Unauthorized access')));\n            }",
+    "Обновление проверки авторизации в /api/add"
 );
-
-// Добавление стилей для статистики в style.css
-addReplacement(
-    'public/style.css',
-    ".admin-card {",
-    ".stats-box { background: var(--bg); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border); }\n.stats-box h3 { margin-top: 0; font-size: 0.9rem; text-transform: uppercase; color: var(--muted); }\n.stats-box ul { list-style: none; padding: 0; margin: 0; font-size: 0.85rem; }\n.admin-card {",
-    "Стили для блока статистики"
-);
-
 
 /**
  * 3. ИСПОЛНЕНИЕ С ТРАНЗАКЦИЕЙ
  */
 function runTransformations() {
-    console.log('\n--- [2/3] APPLYING CHANGES ---');
+    console.log('\n--- [2/3] APPLYING FIXES ---');
     const changedFiles = new Set();
 
     for (const task of tasks) {
@@ -115,6 +107,7 @@ function runTransformations() {
         }
 
         let content = fs.readFileSync(filePath, 'utf8');
+        // Регулярка для поиска с игнорированием пробелов
         const escapedAnchor = anchor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regexStr = escapedAnchor.split(/\s+/).filter(s => s.length > 0).map(s => s + '\\s*').join('');
         const regex = new RegExp(regexStr, 'm');
@@ -130,17 +123,17 @@ function runTransformations() {
 
     console.log('\n--- [3/3] FINALIZING ---');
     if (hasError) {
-        console.log('[ROLLBACK]: Error detected. Restoring files...');
+        console.log('[ROLLBACK]: Error detected. Restoring files to original state...');
         backups.forEach((content, filePath) => {
             fs.writeFileSync(filePath, content);
             if (fs.existsSync(filePath + '.bak')) fs.unlinkSync(filePath + '.bak');
         });
-        console.log('[DONE]: System restored to original state.');
+        console.log('[DONE]: Rollback complete.');
     } else {
         changedFiles.forEach(filePath => {
             if (fs.existsSync(filePath + '.bak')) fs.unlinkSync(filePath + '.bak');
         });
-        console.log('[DONE]: All changes applied successfully. Backups cleared.');
+        console.log('[DONE]: All fixes applied successfully.');
     }
 }
 
