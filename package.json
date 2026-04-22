@@ -1,10 +1,9 @@
 {
   "name": "insight-daily-platform",
-  "version": "1.0.0",
-  "description": "High-performance news platform built with Atomic Stream Architecture",
+  "version": "1.1.0",
+  "description": "Atomic Stream Architecture News Engine",
   "main": "index.js",
   "author": "runas555",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/runas555/insight-daily-platform.git"
@@ -13,8 +12,7 @@
     "start": "node index.js",
     "dev": "nodemon index.js"
   },
-  "dependencies": {},
-  "devDependencies": {
-    "nodemon": "^3.0.1"
+  "engines": {
+    "node": ">=14"
   }
 }

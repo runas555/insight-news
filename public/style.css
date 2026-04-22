@@ -27,3 +27,7 @@ body { font-family: 'Inter', sans-serif; margin: 0; background: var(--bg); color
 .mobile-tabs a { text-decoration: none; color: var(--muted); font-size: 0.7rem; display: flex; flex-direction: column; align-items: center; font-weight: 700; }
 .mobile-tabs i { font-size: 1.3rem; margin-bottom: 4px; }
 @media (max-width: 768px) { .nav-links { display: none; } .mobile-tabs { display: flex; } .hero h1 { font-size: 2.2rem; } }
+
+.vibe-badge { background: #000; color: #fff; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; }
+.vibe-card { background: #f4f4f4; padding: 2rem; border-radius: 12px; border-left: 5px solid #000; }
+.hint { font-size: 0.85rem; color: #666; font-style: italic; }
