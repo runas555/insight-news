@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "name": "insight-daily-platform",
   "builds": [
     {
       "src": "index.js",
@@ -8,8 +9,23 @@
   ],
   "routes": [
     {
+      "src": "/style.css",
+      "dest": "/public/style.css"
+    },
+    {
+      "src": "/sitemap.xml",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/robots.txt",
+      "dest": "/index.js"
+    },
+    {
       "src": "/(.*)",
-      "dest": "index.js"
+      "dest": "/index.js"
     }
-  ]
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
 }

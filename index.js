@@ -22,3 +22,5 @@ server.listen(PORT, () => {
     console.log('Status: ACTIVE');
     console.log('URL: http://localhost:' + PORT);
 });
+// Export for Vercel Serverless
+module.exports = server;
