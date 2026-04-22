@@ -61,8 +61,19 @@ module.exports = async(req, res) => {
         return res.end('User-agent: *\nAllow: /\nSitemap: https://' + req.headers.host + '/sitemap.xml');
     }
 
-    if (parsed.pathname === '/admin' && method === 'GET') {
+    if (parsed.pathname === '/admin/edit' && method === 'GET') {
         if (!checkAuth(req)) return res.end(views.layout('Login', views.adminLogin()));
+        const article = db.getArticleById(parsed.query.id);
+        return res.end(views.layout('Edit Article', views.editPanel(article)));
+    }
+
+    if (parsed.pathname === '/api/delete' && checkAuth(req)) {
+        db.deleteArticle(parsed.query.id);
+        res.writeHead(302, { Location: '/admin' });
+        return res.end();
+    }
+
+    if (parsed.pathname === '/admin' && method === 'GET') {if (!checkAuth(req)) return res.end(views.layout('Login', views.adminLogin()));
         const stats = analytics.getStats();return res.end(views.layout('Admin', views.adminPanel('', stats)));
     }if (parsed.pathname === '/api/login' && method === 'POST') {
         let body = '';
@@ -99,6 +110,20 @@ module.exports = async(req, res) => {
         return;
     }
 
-    res.writeHead(404);
+    if (parsed.pathname === '/api/edit' && method === 'POST' && checkAuth(req)) {
+        let body = '';
+        req.on('data', c => body += c);
+        req.on('end', () => {
+            const p = new URLSearchParams(body);
+            db.updateArticle(p.get('id'), {
+                title: p.get('title'),
+                content: p.get('content'),
+                category: p.get('category')
+            });
+            res.writeHead(302, { Location: '/admin' });
+            res.end();
+        });
+        return;
+    }res.writeHead(404);
     res.end('404 Not Found');
 };

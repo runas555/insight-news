@@ -24,5 +24,17 @@ module.exports = {
         art.id = Date.now();
         data.push(art);
         fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+    },
+    deleteArticle(id) {
+        const data = this.getArticles().filter(a => a.id != id);
+        fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+    },
+    updateArticle(id, updated) {
+        const data = this.getArticles();
+        const index = data.findIndex(a => a.id == id);
+        if (index !== -1) {
+            data[index] = { ...data[index], ...updated };
+            fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+        }
     }
 };

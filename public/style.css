@@ -55,6 +55,13 @@ a:hover { opacity: 0.7; }.featured-block p { font-size: 1.25rem; color: var(--mu
 .stats-box { background: var(--bg); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border); }
 .stats-box h3 { margin-top: 0; font-size: 0.9rem; text-transform: uppercase; color: var(--muted); }
 .stats-box ul { list-style: none; padding: 0; margin: 0; font-size: 0.85rem; }
+.manage-box { margin-top: 30px; border-top: 1px solid var(--border); padding-top: 20px; }
+.manage-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+.manage-item span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%; }
+.actions { display: flex; gap: 15px; }
+.edit-link { color: var(--muted); }
+.del-link { color: var(--red); }
+.btn-cancel { display: block; text-align: center; margin-top: 10px; font-size: 0.8rem; color: var(--muted); }
 .admin-card {background: var(--hero); padding: 40px; border-radius: 24px; width: 100%; max-width: 600px; }
 .admin-card input, .admin-card textarea { width: 100%; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); color: var(--text); font-family: inherit; }
 .admin-card button { width: 100%; padding: 18px; background: var(--text); color: var(--bg); border: none; border-radius: 12px; font-weight: 800; cursor: pointer; }

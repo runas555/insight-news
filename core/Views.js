@@ -114,11 +114,24 @@ module.exports = {
         return `<div class="admin-wrapper"><div class="admin-card"><h2>Management Login</h2><form action="/api/login" method="POST"><input type="text" name="user" placeholder="Username" required>
                         <input type="password" name="pass" placeholder="Password" required><button type="submit">Login</button></form></div></div>`;
     },
-    adminPanel(error = '', stats = {}) {const statsHtml = Object.entries(stats).map(([url, count]) => `<li><code>${url}</code>: <strong>${count}</strong></li>`).join('');return `
+    editPanel(a) {
+        return `<div class="admin-wrapper"><div class="admin-card"><h2>Edit Article</h2><form action="/api/edit" method="POST"><input type="hidden" name="id" value="${a.id}"><input name="title" value="${a.title}" required><input name="category" value="${a.category}"><textarea name="content" rows="12" required>${a.content}</textarea><button type="submit">Save Changes</button><a href="/admin" class="btn-cancel">Cancel</a></form></div></div>`;
+    },
+    adminPanel(error = '', stats = {}) {
+        const articles = require('./DB').getArticles();
+        const articleRows = articles.map(a => `
+            <div class="manage-item">
+                <span>${a.title}</span>
+                <div class="actions">
+                    <a href="/admin/edit?id=${a.id}" class="edit-link"><i class="fas fa-edit"></i></a>
+                    <a href="/api/delete?id=${a.id}" class="del-link" onclick="return confirm('Delete?')"><i class="fas fa-trash"></i></a>
+                </div>
+            </div>`).join('');const statsHtml = Object.entries(stats).map(([url, count]) => `<li><code>${url}</code>: <strong>${count}</strong></li>`).join('');return `
             <div class="admin-wrapper">
                 <div class="admin-card">
                     <h2>Publishing Portal</h2>
-                    <div class="stats-box"><h3>Quick Stats</h3><ul>${statsHtml || '<li>No data yet</li>'}</ul></div>${error ? `<p class="error">${error}</p>` : ''}
+                    <div class="stats-box"><h3>Quick Stats</h3><ul>${statsHtml || '<li>No data yet</li>'}</ul></div>
+                    <div class="manage-box"><h3>Manage Content</h3>${articleRows}</div>${error ? `<p class="error">${error}</p>` : ''}
                     <form action="/api/add" method="POST">
                         <input name="title" placeholder="Article Headline" required>
                         <input name="category" placeholder="Category (e.g. Tech)">

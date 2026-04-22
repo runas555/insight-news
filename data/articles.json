@@ -12,12 +12,5 @@
     "content": "Atomic Stream Architecture focuses on raw, zero-overhead delivery of content. By bypassing heavy frameworks and focusing on the core HTTP module, developers can achieve sub-10ms response times globally. This shift marks a return to the foundational roots of the web.",
     "category": "Technology",
     "date": "October 27"
-  },
-  {
-    "title": "4343",
-    "content": "43434",
-    "category": "Электроника",
-    "date": "Apr 22, 2026",
-    "id": 1776852911616
   }
 ]
