@@ -1,1 +1,16 @@
-[{"id":1,"title":"Future of ASA Architecture","content":"Node.js raw performance is key...","date":"2023-10-27","category":"Tech"},{"id":2,"title":"Clean UI Design Trends","content":"Minimalism and bottom tabs for mobile...","date":"2023-10-26","category":"Design"}]
+[
+  {
+    "id": 1700000000000,
+    "title": "The Silent Revolution of Human-Centric Minimalist Design",
+    "content": "In the age of information overload, the most powerful thing a brand can offer is silence. Clean lines, intentional white space, and the removal of the 'noise' that has come to define the modern internet experience. We explore how minimalism is becoming a functional necessity rather than just an aesthetic choice.",
+    "category": "Culture",
+    "date": "October 28"
+  },
+  {
+    "id": 1700000000001,
+    "title": "Why ASA is the Future of Server-Side Performance",
+    "content": "Atomic Stream Architecture focuses on raw, zero-overhead delivery of content. By bypassing heavy frameworks and focusing on the core HTTP module, developers can achieve sub-10ms response times globally. This shift marks a return to the foundational roots of the web.",
+    "category": "Technology",
+    "date": "October 27"
+  }
+]

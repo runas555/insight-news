@@ -1,6 +1,7 @@
 /**
- * SETUP_RELOAD.CJS - ASA Architecture Enhancement + Nodemon DX
- * Purpose: Infinite Dev-Cycle with Nodemon, Live Analytics Dashboard, and Category Filters.
+ * SETUP_REFINED.CJS - ASA Architecture (Clean User Edition)
+ * Focus: User-centric UI, Hidden Admin, High Performance, Modern Typography.
+ * Changes: Removed Admin links from navigation, added Reading Time, Featured News, and SEO optimization.
  */
 
 const fs = require('fs');
@@ -29,9 +30,8 @@ function safeWrite(filePath, content) {
             history.push({ path: filePath, bak: null });
         }
         fs.writeFileSync(filePath, content, 'utf8');
-        console.log(`${ANSI.green}[UPDATING]${ANSI.reset} ${filePath}`);
+        console.log(`${ANSI.green}[CLEAN]${ANSI.reset} Updated: ${filePath}`);
     } catch (err) {
-        console.error(`${ANSI.red}[FAILED]${ANSI.reset} ${err.message}`);
         rollback();
         process.exit(1);
     }
@@ -48,15 +48,8 @@ function rollback() {
     }
 }
 
-// --- 1. UPDATE PACKAGE.JSON FOR NODEMON ---
-const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-pkg.scripts.dev = "nodemon index.js";
-pkg.devDependencies = {
-    "nodemon": "^3.0.1"
-};
-safeWrite('package.json', JSON.stringify(pkg, null, 2));
-
-// --- 2. UPDATE VIEW ENGINE: ADD STATS DASHBOARD & CATEGORY FILTER ---
+// --- 1. CORE: VIEWS (USER-FIRST INTERFACE) ---
+// Note: We removed Admin/Stats from nav for clean UX. Admin is still accessible via /manage-portal
 safeWrite('core/Views.js', `
 const seo = require('./SEO');
 
@@ -69,125 +62,127 @@ module.exports = {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>\${title} | ASA News</title>
+    <title>\${title} | Insight Daily</title>
     \${seoTags}
     \${headContent}
     <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header>
-        <nav class="desktop-nav">
-            <div class="logo"><a href="/"><i class="fas fa-bolt"></i> ASA NEWS</a></div>
-            <div class="nav-actions">
-                <form action="/search" method="GET" class="search-box">
-                    <input name="q" placeholder="Explore stories...">
-                </form>
-                <ul>
-                    <li><a href="/">Feed</a></li>
-                    <li><a href="/admin">Admin</a></li>
-                    <li><a href="/admin/stats">Analytics</a></li>
-                </ul>
+    <div id="progress-bar"></div>
+    <header class="main-header">
+        <nav class="container">
+            <div class="logo"><a href="/">Insight<span>Daily</span></a></div>
+            <div class="nav-links">
+                <a href="/search?q=Technology">Technology</a>
+                <a href="/search?q=Culture">Culture</a>
+                <a href="/search?q=Business">Business</a>
+                <div class="search-trigger" onclick="document.querySelector('.search-overlay').style.display='flex'">
+                    <i class="fas fa-search"></i>
+                </div>
             </div>
         </nav>
     </header>
-    <main class="fade-in">\${content}</main>
-    <div class="mobile-tabs">
-        <a href="/"><i class="fas fa-home"></i><span>Home</span></a>
-        <a href="/search"><i class="fas fa-search"></i><span>Search</span></a>
-        <a href="/admin/stats"><i class="fas fa-chart-line"></i><span>Stats</span></a>
-        <a href="/admin"><i class="fas fa-plus-circle"></i><span>Post</span></a>
+
+    <div class="search-overlay">
+        <div class="close-search" onclick="document.querySelector('.search-overlay').style.display='none'">&times;</div>
+        <form action="/search" method="GET">
+            <input name="q" placeholder="What are you looking for?" autofocus>
+        </form>
     </div>
+
+    <main class="container fade-in">\${content}</main>
+
+    <footer class="main-footer">
+        <div class="container">
+            <p>&copy; 2024 Insight Daily. Professional Journalism.</p>
+        </div>
+    </footer>
+
+    <div class="mobile-tabs">
+        <a href="/"><i class="fas fa-newspaper"></i><span>Feed</span></a>
+        <a href="/search?q=Tech"><i class="fas fa-microchip"></i><span>Tech</span></a>
+        <a href="/search?q=World"><i class="fas fa-globe-americas"></i><span>World</span></a>
+        <div onclick="document.querySelector('.search-overlay').style.display='flex'"><i class="fas fa-search"></i><span>Search</span></div>
+    </div>
+
+    <script>
+        window.onscroll = function() {
+            let winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            let height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            let scrolled = (winScroll / height) * 100;
+            document.getElementById("progress-bar").style.width = scrolled + "%";
+        };
+    </script>
 </body>
 </html>\`;
     },
     articleList(articles) {
-        if (articles.length === 0) return '<div class="no-results"><h3>No stories found.</h3><p>Try different keywords.</p></div>';
+        if (articles.length === 0) return '<div class="empty"><h2>No stories found.</h2><a href="/">Back to Feed</a></div>';
+        
+        // Highlight first article as "Featured"
+        const featured = articles[0];
+        const rest = articles.slice(1);
+
         return \`
-            <div class="category-pills">
-                <a href="/" class="pill">All</a>
-                <a href="/search?q=Tech" class="pill">Tech</a>
-                <a href="/search?q=Design" class="pill">Design</a>
-                <a href="/search?q=World" class="pill">World</a>
-            </div>
-            <div class="grid">
-                \${articles.map(a => \`
-                <article class="card">
-                    <div class="card-content">
-                        <span class="badge">\${a.category}</span>
-                        <h2>\${a.title}</h2>
-                        <p>\${a.content.substring(0, 120)}...</p>
-                        <div class="meta">
-                            <span><i class="far fa-calendar-alt"></i> \${a.date}</span>
-                            <a href="/article?id=\${a.id}" class="read-btn">Read <i class="fas fa-chevron-right"></i></a>
-                        </div>
+            <section class="featured-hero">
+                <div class="badge-featured">Featured Story</div>
+                <h1>\${featured.title}</h1>
+                <p>\${featured.content.substring(0, 180)}...</p>
+                <a href="/article?id=\${featured.id}" class="read-more">Full Story <i class="fas fa-arrow-right"></i></a>
+            </section>
+
+            <div class="section-title">Latest Updates</div>
+            <div class="article-grid">
+                \${rest.map(a => \`
+                <article class="news-card">
+                    <span class="category">\${a.category}</span>
+                    <h3><a href="/article?id=\${a.id}">\${a.title}</a></h3>
+                    <div class="meta">
+                        <span>\${a.date}</span>
+                        <span class="dot"></span>
+                        <span>\${Math.ceil(a.content.length / 500)} min read</span>
                     </div>
                 </article>\`).join('')}
             </div>\`;
     },
-    statsPage(stats) {
-        const rows = Object.entries(stats).map(([url, count]) => \`
-            <tr>
-                <td><code>\${url}</code></td>
-                <td><span class="count-tag">\${count} views</span></td>
-            </tr>
-        \`).join('');
-        return \`
-            <section class="admin-stats">
-                <h1><i class="fas fa-chart-bar"></i> Platform Analytics</h1>
-                <table class="stats-table">
-                    <thead><tr><th>Route Path</th><th>Traffic</th></tr></thead>
-                    <tbody>\${rows}</tbody>
-                </table>
-                <a href="/admin" class="btn">Return to Editor</a>
-            </section>\`;
-    },
     singleArticle(a) {
         return \`
-            <div class="full-article">
-                <header class="art-header">
-                    <a href="/" class="back-link"><i class="fas fa-arrow-left"></i> Feed</a>
-                    <span class="badge">\${a.category}</span>
+            <article class="reading-view">
+                <header>
+                    <span class="category-tag">\${a.category}</span>
                     <h1>\${a.title}</h1>
-                    <div class="meta-line">Published on <strong>\${a.date}</strong></div>
+                    <div class="article-meta">
+                        By Editor &bull; \${a.date} &bull; \${Math.ceil(a.content.length / 500)} min read
+                    </div>
                 </header>
-                <div class="content-body">\${a.content}</div>
-            </div>\`;
+                <div class="article-content">\${a.content.replace(/\\n/g, '<br><br>')}</div>
+                <div class="share-box">
+                    <span>Share:</span>
+                    <i class="fab fa-twitter"></i>
+                    <i class="fab fa-facebook"></i>
+                    <i class="fas fa-link"></i>
+                </div>
+            </article>\`;
     },
     adminPanel() {
         return \`
-            <section class="admin-form fade-in">
-                <div class="form-header">
-                    <h1><i class="fas fa-feather-alt"></i> Write News</h1>
-                    <p>Standardized ASA Publishing Engine</p>
-                </div>
+            <section class="portal-box">
+                <h1>Publishing Portal</h1>
                 <form action="/api/add" method="POST">
-                    <div class="input-group">
-                        <label>Title</label>
-                        <input name="title" placeholder="Catchy headline" required>
-                    </div>
-                    <div class="input-group">
-                        <label>Category</label>
-                        <select name="category">
-                            <option value="Tech">Tech</option>
-                            <option value="World">World</option>
-                            <option value="Design">Design</option>
-                            <option value="Business">Business</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label>Body Content</label>
-                        <textarea name="content" rows="12" placeholder="Tell the world..." required></textarea>
-                    </div>
-                    <button type="submit" class="btn-submit">
-                        <i class="fas fa-paper-plane"></i> Publish to Feed
-                    </button>
+                    <input name="title" placeholder="Story Headline" required>
+                    <select name="category">
+                        <option>Technology</option><option>Culture</option><option>Business</option><option>Design</option>
+                    </select>
+                    <textarea name="content" rows="15" placeholder="Content starts here..." required></textarea>
+                    <button type="submit">Deploy Article</button>
                 </form>
             </section>\`;
     }
 };`);
 
-// --- 3. UPDATE ROUTER: ADD ANALYTICS ROUTE ---
+// --- 2. CORE: ROUTER (HIDDEN ADMIN) ---
 safeWrite('core/Router.js', `
 const url = require('url');
 const db = require('./DB');
@@ -200,29 +195,19 @@ module.exports = async (req, res) => {
     const parsed = url.parse(req.url, true);
     const method = req.method;
 
-    // Tracker
     analytics.track(parsed.pathname);
 
+    // PUBLIC ROUTES
     if (parsed.pathname === '/' && method === 'GET') {
-        const articles = db.getArticles();
-        const html = views.layout('Global News', views.articleList(articles));
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        return res.end(html);
-    }
-
-    if (parsed.pathname === '/admin/stats' && method === 'GET') {
-        const stats = analytics.getStats();
-        const html = views.layout('Platform Stats', views.statsPage(stats));
+        const articles = [...db.getArticles()].reverse();
+        const html = views.layout('Fresh Feed', views.articleList(articles));
         res.writeHead(200, { 'Content-Type': 'text/html' });
         return res.end(html);
     }
 
     if (parsed.pathname === '/article' && method === 'GET') {
         const article = db.getArticleById(parsed.query.id);
-        if (!article) {
-            res.writeHead(404);
-            return res.end('404 Article Not Found');
-        }
+        if (!article) { res.writeHead(404); return res.end('404'); }
         const html = views.layout(article.title, views.singleArticle(article), '', article);
         res.writeHead(200, { 'Content-Type': 'text/html' });
         return res.end(html);
@@ -231,13 +216,14 @@ module.exports = async (req, res) => {
     if (parsed.pathname === '/search' && method === 'GET') {
         const query = parsed.query.q || '';
         const results = db.search(query);
-        const html = views.layout('Search: ' + query, views.articleList(results));
+        const html = views.layout('Explore: ' + query, views.articleList(results));
         res.writeHead(200, { 'Content-Type': 'text/html' });
         return res.end(html);
     }
 
-    if (parsed.pathname === '/admin' && method === 'GET') {
-        const html = views.layout('Admin Console', views.adminPanel());
+    // HIDDEN ADMIN ROUTE (For developers/admins only)
+    if (parsed.pathname === '/manage-portal' && method === 'GET') {
+        const html = views.layout('CMS Access', views.adminPanel());
         res.writeHead(200, { 'Content-Type': 'text/html' });
         return res.end(html);
     }
@@ -246,12 +232,12 @@ module.exports = async (req, res) => {
         let body = '';
         req.on('data', chunk => body += chunk.toString());
         req.on('end', () => {
-            const params = new URLSearchParams(body);
+            const p = new URLSearchParams(body);
             db.saveArticle({
-                title: params.get('title'),
-                content: params.get('content'),
-                category: params.get('category'),
-                date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                title: p.get('title'),
+                content: p.get('content'),
+                category: p.get('category'),
+                date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
             });
             res.writeHead(302, { Location: '/' });
             res.end();
@@ -265,77 +251,96 @@ module.exports = async (req, res) => {
     }
 
     res.writeHead(404);
-    res.end('Route missing');
+    res.end('Not Found');
 };`);
 
-// --- 4. STYLE ENHANCEMENTS (FOR ADMIN & STATS) ---
+// --- 3. THE CSS (MAGAZINE STYLE) ---
 safeWrite('public/style.css', `
-:root { --p: #4f46e5; --p-soft: #eef2ff; --t: #111827; --m: #6b7280; --white: #ffffff; }
-body { font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; background: #fbfcfd; color: var(--t); padding-bottom: 90px; }
-a { text-decoration: none; color: inherit; }
-.logo { font-weight: 800; font-size: 1.4rem; color: var(--p); letter-spacing: -0.5px; }
-nav { background: rgba(255,255,255,0.8); backdrop-filter: blur(12px); border-bottom: 1px solid #f1f5f9; padding: 1rem 5%; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; }
-.nav-actions { display: flex; gap: 30px; align-items: center; }
-nav ul { list-style: none; display: flex; gap: 20px; margin: 0; }
-nav ul a { font-weight: 600; color: var(--m); transition: 0.2s; }
-nav ul a:hover { color: var(--p); }
-.search-box input { border: 1px solid #e2e8f0; padding: 10px 18px; border-radius: 99px; background: #f8fafc; font-size: 0.9rem; width: 220px; outline: none; }
-main { padding: 3rem 5%; max-width: 1000px; margin: auto; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 2rem; }
-.card { background: var(--white); border-radius: 20px; overflow: hidden; border: 1px solid #f1f5f9; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-.card:hover { transform: translateY(-8px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05); }
-.card-content { padding: 1.8rem; }
-.badge { background: var(--p-soft); color: var(--p); padding: 4px 14px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; margin-bottom: 1rem; display: inline-block; }
-.meta { display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; border-top: 1px solid #f1f5f9; padding-top: 1rem; color: var(--m); font-size: 0.85rem; }
-.read-btn { color: var(--p); font-weight: 700; }
-.category-pills { display: flex; gap: 10px; margin-bottom: 2.5rem; overflow-x: auto; padding-bottom: 5px; }
-.pill { background: #fff; border: 1px solid #e2e8f0; padding: 8px 20px; border-radius: 99px; font-weight: 600; color: var(--m); transition: 0.2s; }
-.pill:hover { border-color: var(--p); color: var(--p); }
-.stats-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-.stats-table th { background: #f8fafc; text-align: left; padding: 15px; color: var(--m); }
-.stats-table td { padding: 15px; border-top: 1px solid #f1f5f9; }
-.count-tag { background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 0.8rem; }
-.admin-form { background: #fff; padding: 2.5rem; border-radius: 24px; border: 1px solid #f1f5f9; }
-.input-group { margin-bottom: 1.5rem; }
-.input-group label { display: block; font-weight: 700; margin-bottom: 8px; color: var(--m); }
-.input-group input, .input-group select, .input-group textarea { width: 100%; padding: 14px; border: 1px solid #e2e8f0; border-radius: 12px; font-family: inherit; font-size: 1rem; box-sizing: border-box; }
-.btn-submit { width: 100%; background: var(--t); color: #fff; padding: 18px; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.3s; }
-.btn-submit:hover { opacity: 0.9; transform: scale(0.99); }
-.mobile-tabs { position: fixed; bottom: 0; width: 100%; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1px solid #f1f5f9; display: none; justify-content: space-around; padding: 12px 0; z-index: 2000; }
-.mobile-tabs a { display: flex; flex-direction: column; align-items: center; color: var(--m); font-size: 0.7rem; font-weight: 600; }
-.mobile-tabs a i { font-size: 1.4rem; margin-bottom: 4px; }
-.fade-in { animation: fadeIn 0.5s ease-in; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+:root { --accent: #000; --text: #1a1a1a; --muted: #717171; --bg: #fff; --gap: 2rem; }
+* { box-sizing: border-box; }
+body { font-family: 'Inter', sans-serif; margin: 0; color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+.container { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
+
+#progress-bar { height: 3px; background: var(--accent); width: 0%; position: fixed; top: 0; z-index: 9999; }
+
+.main-header { padding: 1.5rem 0; border-bottom: 1px solid #eee; position: sticky; top: 0; background: #fff; z-index: 100; }
+.main-header nav { display: flex; justify-content: space-between; align-items: center; }
+.logo a { font-family: 'Playfair Display', serif; font-size: 1.8rem; text-decoration: none; color: #000; font-weight: 700; }
+.logo span { color: #888; }
+.nav-links { display: flex; align-items: center; gap: 2rem; }
+.nav-links a { text-decoration: none; color: var(--text); font-weight: 500; font-size: 0.95rem; }
+.search-trigger { cursor: pointer; color: var(--muted); }
+
+.featured-hero { padding: 4rem 0; border-bottom: 4px solid #000; margin-bottom: 3rem; }
+.badge-featured { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 1rem; color: #d00; }
+.featured-hero h1 { font-family: 'Playfair Display', serif; font-size: 3.5rem; line-height: 1.1; margin: 0 0 1.5rem; }
+.featured-hero p { font-size: 1.2rem; color: var(--muted); max-width: 700px; margin-bottom: 2rem; }
+.read-more { font-weight: 800; color: #000; text-decoration: none; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 4px; }
+
+.section-title { font-weight: 800; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; color: #888; margin-bottom: 2rem; }
+.article-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 3rem; margin-bottom: 4rem; }
+.news-card { display: flex; flex-direction: column; }
+.news-card .category { font-size: 0.75rem; font-weight: 700; color: #d00; text-transform: uppercase; margin-bottom: 0.5rem; }
+.news-card h3 { margin: 0 0 1rem; font-family: 'Playfair Display', serif; font-size: 1.5rem; }
+.news-card h3 a { text-decoration: none; color: inherit; }
+.news-card .meta { font-size: 0.85rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.dot { height: 4px; width: 4px; background: #ccc; border-radius: 50%; }
+
+.reading-view { max-width: 700px; margin: 4rem auto; }
+.reading-view h1 { font-family: 'Playfair Display', serif; font-size: 3rem; margin-bottom: 1.5rem; }
+.article-content { font-family: 'Inter', sans-serif; font-size: 1.25rem; line-height: 1.8; color: #333; }
+.category-tag { font-weight: 800; text-transform: uppercase; font-size: 0.8rem; color: #d00; }
+
+.search-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 2000; display: none; align-items: center; justify-content: center; }
+.search-overlay input { font-size: 3rem; border: none; outline: none; border-bottom: 4px solid #000; width: 80%; font-family: 'Playfair Display', serif; }
+.close-search { position: absolute; top: 40px; right: 40px; font-size: 3rem; cursor: pointer; }
+
+.mobile-tabs { position: fixed; bottom: 0; width: 100%; background: #fff; border-top: 1px solid #eee; padding: 12px 0; display: none; justify-content: space-around; z-index: 1000; }
+.mobile-tabs a, .mobile-tabs div { color: var(--muted); display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; font-weight: 600; text-decoration: none; }
+.mobile-tabs i { font-size: 1.3rem; margin-bottom: 4px; }
+
+.portal-box { background: #f9f9f9; padding: 3rem; border-radius: 8px; }
+.portal-box input, .portal-box select, .portal-box textarea { width: 100%; margin-bottom: 1rem; padding: 1rem; border: 1px solid #ddd; font-family: inherit; }
+.portal-box button { background: #000; color: #fff; border: none; padding: 1rem 2rem; font-weight: 700; cursor: pointer; }
+
 @media (max-width: 768px) {
-    .desktop-nav { display: none; }
+    .nav-links { display: none; }
+    .featured-hero h1 { font-size: 2.2rem; }
     .mobile-tabs { display: flex; }
-    main { padding: 1.5rem 5%; }
-    .grid { grid-template-columns: 1fr; }
-}`);
-
-// --- 5. SYSTEM DUMP GENERATOR ---
-function makeDump() {
-    const tree = ['index.js', 'core/DB.js', 'core/Router.js', 'core/Views.js', 'core/Analytics.js', 'core/SEO.js', 'public/style.css'];
-    let dump = `ASA_DUMP_v2_NODEMON\nGenerated: ${new Date().toISOString()}\n\n`;
-    tree.forEach(f => {
-        if (fs.existsSync(f)) {
-            dump += `\n>> FILE: ${f}\n${fs.readFileSync(f, 'utf8')}\n<< END\n`;
-        }
-    });
-    fs.writeFileSync('dump.txt', dump);
+    .main-header { padding: 1rem 0; }
+    .reading-view h1 { font-size: 2rem; }
 }
+`);
 
-// --- 6. EXECUTION ---
-console.log(`${ANSI.cyan}Cleaning environment...${ANSI.reset}`);
-makeDump();
+// --- 4. DATA SEEDING (FOR CLEAN LOOK) ---
+safeWrite('data/articles.json', JSON.stringify([
+    {
+        id: 1700000000000,
+        title: "The Silent Revolution of Human-Centric Minimalist Design",
+        content: "In the age of information overload, the most powerful thing a brand can offer is silence. Clean lines, intentional white space, and the removal of the 'noise' that has come to define the modern internet experience. We explore how minimalism is becoming a functional necessity rather than just an aesthetic choice.",
+        category: "Culture",
+        date: "October 28"
+    },
+    {
+        id: 1700000000001,
+        title: "Why ASA is the Future of Server-Side Performance",
+        content: "Atomic Stream Architecture focuses on raw, zero-overhead delivery of content. By bypassing heavy frameworks and focusing on the core HTTP module, developers can achieve sub-10ms response times globally. This shift marks a return to the foundational roots of the web.",
+        category: "Technology",
+        date: "October 27"
+    }
+], null, 2));
 
-console.log(`${ANSI.green}Configuration Locked.${ANSI.reset}`);
+// --- 5. EXECUTION ---
+console.log(`${ANSI.cyan}Refining User Experience...${ANSI.reset}`);
+console.log(`${ANSI.yellow}Admin hidden at /manage-portal for security.${ANSI.reset}`);
 
 try {
-    console.log(`${ANSI.yellow}Installing Nodemon...${ANSI.reset}`);
-    execSync('npm install', { stdio: 'inherit' });
-    console.log(`${ANSI.cyan}Booting system with Nodemon ASA...${ANSI.reset}`);
+    const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+    pkg.scripts.dev = "nodemon index.js";
+    fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+
+    console.log(`${ANSI.green}Build Finalized. Running with Nodemon...${ANSI.reset}`);
     execSync('npm run dev', { stdio: 'inherit' });
 } catch (e) {
-    console.log(`${ANSI.red}Automatic start failed. Please run: npm install && npm run dev${ANSI.reset}`);
+    console.log("Run: npm run dev");
 }

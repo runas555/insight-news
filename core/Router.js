@@ -10,29 +10,19 @@ module.exports = async (req, res) => {
     const parsed = url.parse(req.url, true);
     const method = req.method;
 
-    // Tracker
     analytics.track(parsed.pathname);
 
+    // PUBLIC ROUTES
     if (parsed.pathname === '/' && method === 'GET') {
-        const articles = db.getArticles();
-        const html = views.layout('Global News', views.articleList(articles));
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        return res.end(html);
-    }
-
-    if (parsed.pathname === '/admin/stats' && method === 'GET') {
-        const stats = analytics.getStats();
-        const html = views.layout('Platform Stats', views.statsPage(stats));
+        const articles = [...db.getArticles()].reverse();
+        const html = views.layout('Fresh Feed', views.articleList(articles));
         res.writeHead(200, { 'Content-Type': 'text/html' });
         return res.end(html);
     }
 
     if (parsed.pathname === '/article' && method === 'GET') {
         const article = db.getArticleById(parsed.query.id);
-        if (!article) {
-            res.writeHead(404);
-            return res.end('404 Article Not Found');
-        }
+        if (!article) { res.writeHead(404); return res.end('404'); }
         const html = views.layout(article.title, views.singleArticle(article), '', article);
         res.writeHead(200, { 'Content-Type': 'text/html' });
         return res.end(html);
@@ -41,13 +31,14 @@ module.exports = async (req, res) => {
     if (parsed.pathname === '/search' && method === 'GET') {
         const query = parsed.query.q || '';
         const results = db.search(query);
-        const html = views.layout('Search: ' + query, views.articleList(results));
+        const html = views.layout('Explore: ' + query, views.articleList(results));
         res.writeHead(200, { 'Content-Type': 'text/html' });
         return res.end(html);
     }
 
-    if (parsed.pathname === '/admin' && method === 'GET') {
-        const html = views.layout('Admin Console', views.adminPanel());
+    // HIDDEN ADMIN ROUTE (For developers/admins only)
+    if (parsed.pathname === '/manage-portal' && method === 'GET') {
+        const html = views.layout('CMS Access', views.adminPanel());
         res.writeHead(200, { 'Content-Type': 'text/html' });
         return res.end(html);
     }
@@ -56,12 +47,12 @@ module.exports = async (req, res) => {
         let body = '';
         req.on('data', chunk => body += chunk.toString());
         req.on('end', () => {
-            const params = new URLSearchParams(body);
+            const p = new URLSearchParams(body);
             db.saveArticle({
-                title: params.get('title'),
-                content: params.get('content'),
-                category: params.get('category'),
-                date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                title: p.get('title'),
+                content: p.get('content'),
+                category: p.get('category'),
+                date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
             });
             res.writeHead(302, { Location: '/' });
             res.end();
@@ -75,5 +66,5 @@ module.exports = async (req, res) => {
     }
 
     res.writeHead(404);
-    res.end('Route missing');
+    res.end('Not Found');
 };

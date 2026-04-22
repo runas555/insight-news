@@ -10,6 +10,7 @@ module.exports = async (req, res) => {
     const parsed = url.parse(req.url, true);
     const method = req.method;
 
+    // Tracker
     analytics.track(parsed.pathname);
 
     if (parsed.pathname === '/' && method === 'GET') {
@@ -19,11 +20,18 @@ module.exports = async (req, res) => {
         return res.end(html);
     }
 
+    if (parsed.pathname === '/admin/stats' && method === 'GET') {
+        const stats = analytics.getStats();
+        const html = views.layout('Platform Stats', views.statsPage(stats));
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        return res.end(html);
+    }
+
     if (parsed.pathname === '/article' && method === 'GET') {
         const article = db.getArticleById(parsed.query.id);
         if (!article) {
             res.writeHead(404);
-            return res.end('Article Not Found');
+            return res.end('404 Article Not Found');
         }
         const html = views.layout(article.title, views.singleArticle(article), '', article);
         res.writeHead(200, { 'Content-Type': 'text/html' });
@@ -32,7 +40,7 @@ module.exports = async (req, res) => {
 
     if (parsed.pathname === '/search' && method === 'GET') {
         const query = parsed.query.q || '';
-        const results = query ? db.search(query) : [];
+        const results = db.search(query);
         const html = views.layout('Search: ' + query, views.articleList(results));
         res.writeHead(200, { 'Content-Type': 'text/html' });
         return res.end(html);
@@ -52,8 +60,8 @@ module.exports = async (req, res) => {
             db.saveArticle({
                 title: params.get('title'),
                 content: params.get('content'),
-                category: params.get('category') || 'General',
-                date: new Date().toLocaleDateString()
+                category: params.get('category'),
+                date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
             });
             res.writeHead(302, { Location: '/' });
             res.end();
@@ -62,13 +70,10 @@ module.exports = async (req, res) => {
     }
 
     if (parsed.pathname === '/style.css') {
-        const cssPath = path.join(__dirname, '../public/style.css');
-        if (fs.existsSync(cssPath)) {
-            res.writeHead(200, { 'Content-Type': 'text/css' });
-            return res.end(fs.readFileSync(cssPath));
-        }
+        res.writeHead(200, { 'Content-Type': 'text/css' });
+        return res.end(fs.readFileSync(path.join(__dirname, '../public/style.css')));
     }
 
     res.writeHead(404);
-    res.end('404 Not Found');
+    res.end('Route missing');
 };
