@@ -1,13 +1,12 @@
 /**
- * SETUP_VIBE_READY.CJS - ASA Architecture (VibeTalent Verification Edition)
- * Documentation Sync: https://vibe-talent.gitbook.io/untitled
+ * SETUP_VIBE_FIX.CJS - Final Verification & Production Sync
+ * Based on: https://vibe-talent.gitbook.io/untitled
  * 
- * Changes:
- * 1. Verification: Strict .vibetalent content (username only).
- * 2. Identity: package.json 'repository' field for Owner Match.
- * 3. Documentation: Professional README.md for platform indexing.
- * 4. UI: Magazine-grade refinement (Typography & Spacing).
- * 5. SEO: Meta-tag optimization for social crawlers.
+ * CRITICAL FIXES:
+ * 1. .vibetalent: Strictly contains only the username "runas555" (no whitespace).
+ * 2. package.json: Full metadata sync for "Owner Match" automatic verification.
+ * 3. vercel.json: Optimized for zero-config deployment.
+ * 4. Architecture: Cleaned up core modules for production indexing.
  */
 
 const fs = require('fs');
@@ -22,6 +21,8 @@ const ANSI = {
 };
 
 const history = [];
+const USERNAME = "runas555";
+const REPO_NAME = "insight-daily-platform";
 
 function safeWrite(filePath, content) {
     const dir = path.dirname(filePath);
@@ -35,16 +36,16 @@ function safeWrite(filePath, content) {
             history.push({ path: filePath, bak: null });
         }
         fs.writeFileSync(filePath, content, 'utf8');
-        console.log(`${ANSI.green}[SUCCESS]${ANSI.reset} Block: ${filePath}`);
+        console.log(`${ANSI.green}[OK]${ANSI.reset} Block: ${filePath}`);
     } catch (err) {
-        console.error(`${ANSI.red}[FAILED]${ANSI.reset} ${filePath}: ${err.message}`);
+        console.error(`${ANSI.red}[FAIL]${ANSI.reset} ${filePath}: ${err.message}`);
         rollback();
         process.exit(1);
     }
 }
 
 function rollback() {
-    console.log(`${ANSI.yellow}Critical error. Initiating safety rollback...${ANSI.reset}`);
+    console.log(`${ANSI.yellow}Reverting changes...${ANSI.reset}`);
     for (const item of history) {
         if (item.bak && fs.existsSync(item.bak)) {
             fs.copyFileSync(item.bak, item.path);
@@ -53,196 +54,219 @@ function rollback() {
             fs.unlinkSync(item.path);
         }
     }
-    console.log(`${ANSI.red}System restored to previous state.${ANSI.reset}`);
 }
 
-// --- 1. VERIFICATION FILE (STRICT USERNAME) ---
-safeWrite('.vibetalent', 'runas555');
+// 1. VERIFICATION FILE (STRICT CONTENT)
+safeWrite('.vibetalent', USERNAME);
 
-// --- 2. PACKAGE.JSON (OWNER MATCH DATA) ---
-const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-pkg.name = "insight-daily-platform";
-pkg.author = "runas555";
-pkg.repository = {
-    "type": "git",
-    "url": "https://github.com/runas555/insight-daily-platform.git"
+// 2. PACKAGE.JSON (OWNER MATCH SYNC)
+const pkg = {
+    "name": REPO_NAME,
+    "version": "1.0.0",
+    "description": "High-performance news platform built with Atomic Stream Architecture",
+    "main": "index.js",
+    "author": USERNAME,
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": `https://github.com/${USERNAME}/${REPO_NAME}.git`
+    },
+    "scripts": {
+        "start": "node index.js",
+        "dev": "nodemon index.js"
+    },
+    "dependencies": {},
+    "devDependencies": {
+        "nodemon": "^3.0.1"
+    }
 };
-pkg.homepage = "https://github.com/runas555/insight-daily-platform#readme";
 safeWrite('package.json', JSON.stringify(pkg, null, 2));
 
-// --- 3. PROFESSIONAL README (FOR PLATFORM INDEXING) ---
-safeWrite('README.md', `
-# Insight Daily Platform
+// 3. VERCEL CONFIG (PRODUCTION READY)
+const vercel = {
+    "version": 2,
+    "name": REPO_NAME,
+    "builds": [{ "src": "index.js", "use": "@vercel/node" }],
+    "routes": [
+        { "src": "/style.css", "dest": "/public/style.css" },
+        { "src": "/(.*)", "dest": "index.js" }
+    ]
+};
+safeWrite('vercel.json', JSON.stringify(vercel, null, 2));
 
-![Verified](https://img.shields.io/badge/VibeTalent-Verified-green)
-![Node](https://img.shields.io/badge/Node.js-Raw-blue)
+// 4. CORE: VIEWS (SEO & UX REFINEMENT)
+safeWrite('core/Views.js', `
+const seo = require('./SEO');
+module.exports = {
+    layout(title, content, head = '', article = null) {
+        return \`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>\${title} | Insight Daily</title>
+    \${seo.generateTags(article)}
+    \${head}
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="main-header">
+        <nav class="container">
+            <div class="logo"><a href="/">Insight<span>Daily</span></a></div>
+            <div class="nav-links">
+                <a href="/search?q=Tech">Tech</a>
+                <a href="/search?q=Business">Business</a>
+                <a href="/manage-portal" class="admin-dot"><i class="fas fa-circle"></i></a>
+            </div>
+        </nav>
+    </header>
+    <main class="container">\${content}</main>
+    <div class="mobile-tabs">
+        <a href="/"><i class="fas fa-home"></i><span>Home</span></a>
+        <a href="/search?q=Trending"><i class="fas fa-fire"></i><span>Trending</span></a>
+        <a href="/manage-portal"><i class="fas fa-cog"></i><span>Portal</span></a>
+    </div>
+</body>
+</html>\`;
+    },
+    articleList(articles) {
+        if (!articles.length) return '<div class="empty">No stories yet.</div>';
+        const featured = articles[0];
+        const rest = articles.slice(1);
+        return \`
+            <section class="hero">
+                <span class="badge">Featured</span>
+                <h1><a href="/article?id=\${featured.id}">\${featured.title}</a></h1>
+                <p>\${featured.content.substring(0, 160)}...</p>
+            </section>
+            <div class="grid">
+                \${rest.map(a => \`
+                <article class="card">
+                    <span class="cat">\${a.category}</span>
+                    <h3><a href="/article?id=\${a.id}">\${a.title}</a></h3>
+                    <div class="meta">\${a.date} &bull; \${Math.ceil(a.content.length / 500)} min read</div>
+                </article>\`).join('')}
+            </div>\`;
+    },
+    singleArticle(a) {
+        return \`
+            <article class="article-view">
+                <header>
+                    <span class="cat">\${a.category}</span>
+                    <h1>\${a.title}</h1>
+                    <div class="meta">By Editorial Team &bull; \${a.date}</div>
+                </header>
+                <div class="article-body">\${a.content.replace(/\\n/g, '<br><br>')}</div>
+            </article>\`;
+    },
+    adminPanel() {
+        return \`
+            <section class="admin-panel">
+                <h2>Publishing Engine</h2>
+                <form action="/api/add" method="POST">
+                    <input name="title" placeholder="Headline" required>
+                    <input name="category" placeholder="Category">
+                    <textarea name="content" rows="10" placeholder="Story content..." required></textarea>
+                    <button type="submit">Deploy to Feed</button>
+                </form>
+            </section>\`;
+    }
+};`);
 
-A high-performance, framework-less news engine built on **Atomic Stream Architecture (ASA)**.
-
-## 🚀 Features
-- **Zero Framework Overheads**: Built using native Node.js HTTP modules.
-- **Atomic Modules**: Core logic separated into DB, Router, SEO, and View engines.
-- **Modern UI**: Dark mode, magazine typography, and mobile-first navigation.
-- **Production Ready**: Full SEO (Sitemaps, Robots.txt) and Vercel support.
-- **Verification**: Fully integrated with VibeTalent protocols.
-
-## 🛠 Tech Stack
-- **Engine**: Node.js (Raw)
-- **Architecture**: ASA (Atomic Stream Architecture)
-- **UI**: CSS Grid/Flexbox (Custom)
-- **Deployment**: Vercel Serverless
-
-## 📝 Verification
-This repository is verified for **runas555**. The \`.vibetalent\` file is located in the root directory.
-`);
-
-// --- 4. UI REFINEMENT (MAGAZINE STYLE) ---
-safeWrite('public/style.css', `
-:root { --bg: #ffffff; --text: #050505; --muted: #6b7280; --border: #e5e7eb; --accent: #111827; --hero: #f9fafb; --red: #dc2626; }
-.dark { --bg: #000000; --text: #f9fafb; --muted: #9ca3af; --border: #1f2937; --accent: #ffffff; --hero: #0a0a0a; --red: #ef4444; }
-
-body { font-family: 'Inter', -apple-system, sans-serif; margin: 0; background: var(--bg); color: var(--text); line-height: 1.6; transition: background 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-.container { max-width: 1140px; margin: 0 auto; padding: 0 2rem; }
-
-#progress-bar { height: 3px; background: var(--red); width: 0%; position: fixed; top: 0; z-index: 10000; }
-
-.main-header { padding: 1.5rem 0; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 1000; }
-.main-header nav { display: flex; justify-content: space-between; align-items: center; }
-.logo a { font-family: 'Playfair Display', serif; font-size: 2rem; text-decoration: none; color: var(--text); font-weight: 900; letter-spacing: -1px; }
-
-.nav-links { display: flex; gap: 2.5rem; align-items: center; }
-.nav-links a { text-decoration: none; color: var(--text); font-weight: 600; font-size: 0.9rem; transition: 0.2s; }
-.nav-links a:hover { color: var(--red); }
-
-.featured-hero { background: var(--hero); padding: 5rem 0; border-bottom: 1px solid var(--border); margin-bottom: 4rem; }
-.badge-featured { color: var(--red); font-weight: 800; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 2px; margin-bottom: 1.5rem; display: block; }
-.featured-hero h1 { font-family: 'Playfair Display', serif; font-size: 4rem; line-height: 1.05; margin: 0 0 2rem; max-width: 900px; }
-.read-more { display: inline-flex; align-items: center; gap: 10px; font-weight: 800; color: var(--text); text-decoration: none; font-size: 1rem; border-bottom: 2px solid var(--text); padding-bottom: 5px; transition: 0.3s; }
-.read-more:hover { gap: 15px; border-color: var(--red); color: var(--red); }
-
-.article-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3.5rem; margin-bottom: 6rem; }
-.news-card { border-top: 1px solid var(--border); padding-top: 1.5rem; }
-.news-card .category { color: var(--red); font-weight: 700; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 0.75rem; display: block; }
-.news-card h3 { font-family: 'Playfair Display', serif; font-size: 1.6rem; margin: 0 0 1rem; line-height: 1.3; }
-.news-card h3 a { text-decoration: none; color: inherit; }
-.meta { font-size: 0.85rem; color: var(--muted); display: flex; align-items: center; gap: 10px; }
-
-.newsletter-section { padding: 6rem 0; background: var(--accent); color: var(--bg); text-align: center; }
-.newsletter-box h2 { font-family: 'Playfair Display', serif; font-size: 2.5rem; margin-bottom: 1rem; }
-.newsletter-box form { display: flex; max-width: 500px; margin: 3rem auto 0; gap: 0; border-bottom: 2px solid var(--muted); }
-.newsletter-box input { flex: 1; padding: 1rem; background: none; border: none; color: var(--bg); font-size: 1.1rem; outline: none; }
-.newsletter-box button { background: none; border: none; color: var(--bg); font-weight: 800; cursor: pointer; text-transform: uppercase; padding: 0 1rem; }
-
-.mobile-tabs { position: fixed; bottom: 0; width: 100%; background: var(--bg); border-top: 1px solid var(--border); display: none; justify-content: space-around; padding: 15px 0; z-index: 2000; }
-.mobile-tabs div, .mobile-tabs a { color: var(--muted); text-align: center; font-size: 0.65rem; font-weight: 700; text-decoration: none; }
-.mobile-tabs i { font-size: 1.4rem; margin-bottom: 5px; display: block; }
-
-@media (max-width: 1024px) { .article-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 768px) {
-    .nav-links { display: none; }
-    .mobile-tabs { display: flex; }
-    .featured-hero h1 { font-size: 2.5rem; }
-    .article-grid { grid-template-columns: 1fr; gap: 2.5rem; }
-    .main-header { padding: 1rem 0; }
-}
-`);
-
-// --- 5. ROUTER (SEO & CMS OPTIMIZATION) ---
+// 5. CORE: ROUTER (STRICT PROD LOGIC)
 safeWrite('core/Router.js', `
 const url = require('url');
 const db = require('./DB');
 const views = require('./Views');
-const analytics = require('./Analytics');
-const sitemap = require('./Sitemap');
 const fs = require('fs');
 const path = require('path');
 
 module.exports = async (req, res) => {
     const parsed = url.parse(req.url, true);
     const method = req.method;
-    const host = req.headers.host;
 
-    analytics.track(parsed.pathname);
-
-    // SEO Files
-    if (parsed.pathname === '/sitemap.xml') {
-        res.writeHead(200, { 'Content-Type': 'application/xml' });
-        return res.end(sitemap.generate(host));
-    }
-    if (parsed.pathname === '/robots.txt') {
-        res.writeHead(200, { 'Content-Type': 'text/plain' });
-        return res.end(\`User-agent: *\\nAllow: /\\nSitemap: https://\${host}/sitemap.xml\`);
-    }
-
-    // Static Assets
-    if (parsed.pathname === '/style.css') {
-        res.writeHead(200, { 'Content-Type': 'text/css' });
-        return res.end(fs.readFileSync(path.join(__dirname, '../public/style.css')));
-    }
-
-    // Public Pages
     if (parsed.pathname === '/' && method === 'GET') {
         const articles = [...db.getArticles()].reverse();
-        const html = views.layout('Global Insight', views.articleList(articles));
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        return res.end(html);
+        return res.end(views.layout('Home', views.articleList(articles)));
     }
-
     if (parsed.pathname === '/article' && method === 'GET') {
         const article = db.getArticleById(parsed.query.id);
-        if (!article) { res.writeHead(404); return res.end('Not Found'); }
-        const html = views.layout(article.title, views.singleArticle(article), '', article);
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        return res.end(html);
+        if (!article) return (res.writeHead(404), res.end('404'));
+        return res.end(views.layout(article.title, views.singleArticle(article), '', article));
     }
-
     if (parsed.pathname === '/search' && method === 'GET') {
         const query = parsed.query.q || '';
         const results = db.search(query);
-        const html = views.layout('Search: ' + query, views.articleList(results));
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        return res.end(html);
+        return res.end(views.layout('Search: ' + query, views.articleList(results)));
     }
-
-    // Hidden CMS (Unlisted in navigation)
     if (parsed.pathname === '/manage-portal' && method === 'GET') {
-        const html = views.layout('CMS Access', views.adminPanel());
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        return res.end(html);
+        return res.end(views.layout('Portal', views.adminPanel()));
     }
-
     if (parsed.pathname === '/api/add' && method === 'POST') {
         let body = '';
-        req.on('data', chunk => body += chunk.toString());
+        req.on('data', c => body += c);
         req.on('end', () => {
             const p = new URLSearchParams(body);
             db.saveArticle({
                 title: p.get('title'),
                 content: p.get('content'),
-                category: p.get('category'),
-                date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+                category: p.get('category') || 'General',
+                date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
             });
             res.writeHead(302, { Location: '/' });
             res.end();
         });
         return;
     }
-
+    if (parsed.pathname === '/style.css') {
+        res.writeHead(200, { 'Content-Type': 'text/css' });
+        return res.end(fs.readFileSync(path.join(__dirname, '../public/style.css')));
+    }
     res.writeHead(404);
-    res.end('404');
+    res.end('Not Found');
 };`);
 
-// --- FINAL REPORT ---
-console.log(`\n${ANSI.cyan}--- ASA VERIFICATION READY ---${ANSI.reset}`);
-console.log(`${ANSI.green}1. .vibetalent file set to "runas555".${ANSI.reset}`);
-console.log(`${ANSI.green}2. README.md generated for GitHub indexing.${ANSI.reset}`);
-console.log(`${ANSI.green}3. package.json updated with repository URL.${ANSI.reset}`);
-console.log(`${ANSI.green}4. UI Refined to Magazine-standard.${ANSI.reset}`);
+// 6. CSS (PRODUCTION MAG STYLE)
+safeWrite('public/style.css', `
+:root { --bg: #fff; --text: #111; --muted: #777; --accent: #e53e3e; --border: #eee; }
+body { font-family: 'Inter', sans-serif; margin: 0; background: var(--bg); color: var(--text); padding-bottom: 80px; }
+.container { max-width: 1000px; margin: 0 auto; padding: 0 20px; }
+.main-header { border-bottom: 1px solid var(--border); padding: 20px 0; position: sticky; top: 0; background: #fff; z-index: 100; }
+.main-header nav { display: flex; justify-content: space-between; align-items: center; }
+.logo a { font-family: 'Playfair Display', serif; font-size: 1.8rem; font-weight: 900; text-decoration: none; color: #000; }
+.logo span { color: var(--muted); }
+.nav-links a { text-decoration: none; color: var(--text); font-weight: 600; margin-left: 25px; font-size: 0.9rem; }
+.admin-dot { color: #eee !important; font-size: 0.5rem !important; }
+.hero { padding: 60px 0; border-bottom: 3px solid #000; margin-bottom: 40px; }
+.hero h1 { font-family: 'Playfair Display', serif; font-size: 3.5rem; margin: 10px 0; line-height: 1.1; }
+.hero h1 a { text-decoration: none; color: inherit; }
+.badge { color: var(--accent); text-transform: uppercase; font-weight: 800; font-size: 0.7rem; letter-spacing: 2px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 40px; }
+.card { border-top: 1px solid var(--border); padding-top: 20px; }
+.card h3 { font-family: 'Playfair Display', serif; font-size: 1.5rem; margin: 10px 0; }
+.card h3 a { text-decoration: none; color: inherit; }
+.cat { color: var(--accent); font-weight: 700; font-size: 0.7rem; text-transform: uppercase; }
+.meta { font-size: 0.8rem; color: var(--muted); }
+.article-view { max-width: 700px; margin: 60px auto; }
+.article-view h1 { font-family: 'Playfair Display', serif; font-size: 3rem; line-height: 1.2; }
+.article-body { font-size: 1.25rem; line-height: 1.8; margin-top: 30px; }
+.admin-panel input, .admin-panel textarea { width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid var(--border); font-family: inherit; }
+.admin-panel button { background: #000; color: #fff; border: none; padding: 15px 30px; font-weight: 700; cursor: pointer; }
+.mobile-tabs { position: fixed; bottom: 0; width: 100%; background: #fff; border-top: 1px solid var(--border); display: none; justify-content: space-around; padding: 12px 0; }
+.mobile-tabs a { text-decoration: none; color: var(--muted); font-size: 0.7rem; display: flex; flex-direction: column; align-items: center; font-weight: 700; }
+.mobile-tabs i { font-size: 1.3rem; margin-bottom: 4px; }
+@media (max-width: 768px) { .nav-links { display: none; } .mobile-tabs { display: flex; } .hero h1 { font-size: 2.2rem; } }
+`);
 
-console.log(`\n${ANSI.yellow}NEXT STEPS (Manual):${ANSI.reset}`);
-console.log(`1. Create repo: https://github.com/runas555/insight-daily-platform`);
-console.log(`2. Run: git add . && git commit -m "Verification sync" && git push -u origin main`);
-console.log(`3. Go to VibeTalent and click "Verify".`);
-
-// Cleanup backups
+// 7. CLEANUP & REPORT
 history.forEach(h => { if (h.bak && fs.existsSync(h.bak)) fs.unlinkSync(h.bak); });
+
+console.log(`\n${ANSI.cyan}--- VERIFICATION READY ---${ANSI.reset}`);
+console.log(`${ANSI.green}1. .vibetalent contains EXACTLY "${USERNAME}".${ANSI.reset}`);
+console.log(`${ANSI.green}2. package.json points to https://github.com/${USERNAME}/${REPO_NAME}${ANSI.reset}`);
+console.log(`${ANSI.green}3. Architecture is production-indexed.${ANSI.reset}`);
+
+console.log(`\n${ANSI.yellow}ACTION:${ANSI.reset} PUSH TO GITHUB NOW.`);
+console.log(`${ANSI.white}git add . && git commit -m "Vibe sync" && git push origin main${ANSI.reset}`);
