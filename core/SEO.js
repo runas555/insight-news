@@ -1,18 +1,27 @@
 
 module.exports = {
     generateTags(article) {
-        if (!article) return `
+        const base = `
             <meta name="robots" content="index, follow">
-            <meta property="og:type" content="website">
-            <meta property="og:title" content="ASA News - Modern Architecture">
-            <meta property="og:description" content="The fastest news delivery system built on Node.js">
+            <meta property="og:site_name" content="Insight News">
+            <meta name="twitter:card" content="summary_large_image">
         `;
-        return `
-            <meta name="description" content="${article.content.substring(0, 150)}">
+        if (!article) return base;
+
+        const schema = {
+            "@context": "https://schema.org",
+            "@type": "NewsArticle",
+            "headline": article.title,
+            "datePublished": article.date,
+            "author": {"@type": "Person", "name": "Insight Editorial"},
+            "description": article.content.substring(0, 160)
+        };
+
+        return base + `
+            <meta name="description" content="${article.content.substring(0, 160)}">
             <meta property="og:title" content="${article.title}">
-            <meta property="og:description" content="${article.content.substring(0, 100)}">
             <meta property="og:type" content="article">
-            <meta name="keywords" content="${article.category}, news, tech">
+            <script type="application/ld+json">${JSON.stringify(schema)}</script>
         `;
     }
 };
