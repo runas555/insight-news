@@ -1,60 +1,84 @@
 /**
- * FINAL_DIAGNOSTIC.CJS - Проверка верификации проекта
- * Если OAuth подтвержден, но проект не виден, проблема в одной из этих 4 деталей:
+ * MIGRATION_TO_INSIGHT_NEWS.CJS
+ * Purpose: Move project to the new 'insight-news' repository and fix verification.
  */
 
 const fs = require('fs');
+const path = require('path');
 const { execSync } = require('child_process');
 
-const USER = "runas555";
-const REPO = "insight-daily-platform";
+const ANSI = {
+    reset: "\x1b[0m",
+    green: "\x1b[32m",
+    red: "\x1b[31m",
+    cyan: "\x1b[36m",
+    yellow: "\x1b[33m"
+};
 
-function runDiagnostic() {
-    console.log("\x1b[36m--- ЗАПУСК ДИАГНОСТИКИ ВЕРИФИКАЦИИ ---\x1b[0m\n");
+const USERNAME = "runas555";
+const NEW_REPO = "insight-news";
 
-    // 1. Проверка файла .vibetalent (самая частая ошибка - лишние пробелы или невидимые символы)
-    if (fs.existsSync('.vibetalent')) {
-        const content = fs.readFileSync('.vibetalent', 'utf8').trim();
-        if (content === USER) {
-            console.log("\x1b[32m[OK]\x1b[0m Файл .vibetalent корректен (содержит только '" + USER + "')");
-            // Перезаписываем на всякий случай без лишних байтов (BOM/пробелов)
-            fs.writeFileSync('.vibetalent', USER, 'utf8');
-        } else {
-            console.log("\x1b[31m[FAIL]\x1b[0m В файле .vibetalent написано '" + content + "', а должно быть '" + USER + "'");
-            fs.writeFileSync('.vibetalent', USER, 'utf8');
-        }
-    } else {
-        console.log("\x1b[31m[FAIL]\x1b[0m Файл .vibetalent отсутствует в корневой папке!");
-        fs.writeFileSync('.vibetalent', USER, 'utf8');
-    }
+function migrate() {
+    console.log(`${ANSI.cyan}--- MIGRATION TO ${NEW_REPO} ---${ANSI.reset}`);
 
-    // 2. Проверка ветки (VibeTalent ищет в 'main')
     try {
-        const branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
-        if (branch === 'main') {
-            console.log("\x1b[32m[OK]\x1b[0m Вы находитесь в ветке 'main'");
-        } else {
-            console.log("\x1b[33m[WARN]\x1b[0m Ваша ветка '" + branch + "'. Платформа может требовать 'main'.");
-            console.log("      Выполните: git branch -M main");
+        // 1. UPDATE PACKAGE.JSON
+        if (fs.existsSync('package.json')) {
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.name = NEW_REPO;
+            pkg.repository = {
+                "type": "git",
+                "url": `https://github.com/${USERNAME}/${NEW_REPO}.git`
+            };
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+            console.log(`${ANSI.green}[OK]${ANSI.reset} package.json updated.`);
         }
-    } catch (e) {
-        console.log("\x1b[31m[FAIL]\x1b[0m Git не инициализирован.");
+
+        // 2. UPDATE VERCEL.JSON
+        if (fs.existsSync('vercel.json')) {
+            const vercel = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
+            vercel.name = NEW_REPO;
+            fs.writeFileSync('vercel.json', JSON.stringify(vercel, null, 2));
+            console.log(`${ANSI.green}[OK]${ANSI.reset} vercel.json updated.`);
+        }
+
+        // 3. STRICT VERIFICATION FILE
+        fs.writeFileSync('.vibetalent', USERNAME);
+        console.log(`${ANSI.green}[OK]${ANSI.reset} .vibetalent set to "${USERNAME}".`);
+
+        // 4. GIT RE-LINKING
+        console.log(`${ANSI.yellow}Re-linking Git to ${NEW_REPO}...${ANSI.reset}`);
+        try {
+            // Check if git is initialized
+            execSync('git rev-parse --is-inside-work-tree', { stdio: 'ignore' });
+            execSync(`git remote set-url origin https://github.com/${USERNAME}/${NEW_REPO}.git`);
+        } catch (e) {
+            execSync('git init');
+            execSync(`git remote add origin https://github.com/${USERNAME}/${NEW_REPO}.git`);
+        }
+
+        // 5. BRANCH NORMALIZATION
+        try {
+            execSync('git branch -M main');
+            console.log(`${ANSI.green}[OK]${ANSI.reset} Branch set to "main".`);
+        } catch (e) {
+            console.error(`${ANSI.red}[ERR]${ANSI.reset} Could not rename branch.`);
+        }
+
+        // 6. FINAL INSTRUCTIONS
+        console.log(`\n${ANSI.cyan}--- PREPARATION COMPLETE ---${ANSI.reset}`);
+        console.log(`The project is now configured for: ${ANSI.green}https://github.com/${USERNAME}/${NEW_REPO}${ANSI.reset}`);
+        
+        console.log(`\n${ANSI.yellow}RUN THESE COMMANDS MANUALLY:${ANSI.reset}`);
+        console.log(`${ANSI.white}1. git add .${ANSI.reset}`);
+        console.log(`${ANSI.white}2. git commit -m "Final migration to insight-news"${ANSI.reset}`);
+        console.log(`${ANSI.white}3. git push -u origin main --force${ANSI.reset}`);
+
+        console.log(`\n${ANSI.cyan}After pushing, go to the platform and click Verify on the "insight-news" project.${ANSI.reset}`);
+
+    } catch (err) {
+        console.error(`${ANSI.red}[FATAL]${ANSI.reset} ${err.message}`);
     }
-
-    // 3. Проверка публичности репозитория (САМОЕ ВАЖНОЕ)
-    console.log("\n\x1b[33mПРОКЕРЬТЕ ЭТИ ПУНКТЫ ВРУЧНУЮ:\x1b[0m");
-    console.log("1. \x1b[1mПубличность:\x1b[0m Репозиторий на GitHub должен быть PUBLIC. Если он Private, платформа его не увидит.");
-    console.log("2. \x1b[1mURL на сайте:\x1b[0m Зайдите в настройки проекта на VibeTalent.");
-    console.log("   Ссылка должна быть строго: \x1b[36mhttps://github.com/" + USER + "/" + REPO + "\x1b[0m");
-    console.log("3. \x1b[1mСинхронизация:\x1b[0m После пуша файла .vibetalent подождите 1-2 минуты (кэш GitHub API).");
-
-    // 4. Финальный пуш (инструкция)
-    console.log("\n\x1b[35mИНСТРУКЦИЯ ДЛЯ ФИНАЛЬНОГО ПУША:\x1b[0m");
-    console.log("git add .vibetalent package.json");
-    console.log("git commit -m 'fix: verification file content'");
-    console.log("git push origin main");
-
-    console.log("\n\x1b[36m--------------------------------------\x1b[0m");
 }
 
-runDiagnostic();
+migrate();
