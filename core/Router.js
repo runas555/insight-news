@@ -14,28 +14,33 @@ module.exports = async (req, res) => {
 
     analytics.track(parsed.pathname);
 
-    // SEO Static Routes
+    // SEO Files
     if (parsed.pathname === '/sitemap.xml') {
         res.writeHead(200, { 'Content-Type': 'application/xml' });
         return res.end(sitemap.generate(host));
     }
-
     if (parsed.pathname === '/robots.txt') {
         res.writeHead(200, { 'Content-Type': 'text/plain' });
         return res.end(`User-agent: *\nAllow: /\nSitemap: https://${host}/sitemap.xml`);
     }
 
-    // Public Routes
+    // Static Assets
+    if (parsed.pathname === '/style.css') {
+        res.writeHead(200, { 'Content-Type': 'text/css' });
+        return res.end(fs.readFileSync(path.join(__dirname, '../public/style.css')));
+    }
+
+    // Public Pages
     if (parsed.pathname === '/' && method === 'GET') {
         const articles = [...db.getArticles()].reverse();
-        const html = views.layout('Fresh Feed', views.articleList(articles));
+        const html = views.layout('Global Insight', views.articleList(articles));
         res.writeHead(200, { 'Content-Type': 'text/html' });
         return res.end(html);
     }
 
     if (parsed.pathname === '/article' && method === 'GET') {
         const article = db.getArticleById(parsed.query.id);
-        if (!article) { res.writeHead(404); return res.end('404'); }
+        if (!article) { res.writeHead(404); return res.end('Not Found'); }
         const html = views.layout(article.title, views.singleArticle(article), '', article);
         res.writeHead(200, { 'Content-Type': 'text/html' });
         return res.end(html);
@@ -44,12 +49,12 @@ module.exports = async (req, res) => {
     if (parsed.pathname === '/search' && method === 'GET') {
         const query = parsed.query.q || '';
         const results = db.search(query);
-        const html = views.layout('Explore: ' + query, views.articleList(results));
+        const html = views.layout('Search: ' + query, views.articleList(results));
         res.writeHead(200, { 'Content-Type': 'text/html' });
         return res.end(html);
     }
 
-    // Hidden CMS
+    // Hidden CMS (Unlisted in navigation)
     if (parsed.pathname === '/manage-portal' && method === 'GET') {
         const html = views.layout('CMS Access', views.adminPanel());
         res.writeHead(200, { 'Content-Type': 'text/html' });
@@ -73,11 +78,6 @@ module.exports = async (req, res) => {
         return;
     }
 
-    if (parsed.pathname === '/style.css') {
-        res.writeHead(200, { 'Content-Type': 'text/css' });
-        return res.end(fs.readFileSync(path.join(__dirname, '../public/style.css')));
-    }
-
     res.writeHead(404);
-    res.end('Not Found');
+    res.end('404');
 };
