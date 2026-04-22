@@ -9,7 +9,9 @@ const ADMIN_PIN = "1234";
 
 module.exports = async (req, res) => {
     const parsed = url.parse(req.url, true);
-    const method = req.method;
+    const analytics = require('./Analytics');
+    const sitemap = require('./Sitemap');
+    analytics.track(parsed.pathname);const method = req.method;
 
     // PERFORMANCE: Cache-Control for Static Files
     if (parsed.pathname === '/style.css') {
@@ -17,8 +19,9 @@ module.exports = async (req, res) => {
             'Content-Type': 'text/css',
             'Cache-Control': 'public, max-age=31536000' 
         });
-        return res.end(fs.readFileSync(path.join(__dirname, '../public/style.css')));
-    }
+        const cssPath = path.join(__dirname, '../public/style.css');
+        if (fs.existsSync(cssPath)) return res.end(fs.readFileSync(cssPath));
+        res.end('');}
 
     // PUBLIC PAGES
     if (parsed.pathname === '/' && method === 'GET') {
@@ -38,7 +41,12 @@ module.exports = async (req, res) => {
         return res.end(views.layout(article.title, views.singleArticle(article, related), '', article));
     }
 
-    if (parsed.pathname === '/search' && method === 'GET') {
+    if (parsed.pathname === '/sitemap.xml') {
+        res.writeHead(200, { 'Content-Type': 'application/xml' });
+        return res.end(sitemap.generate(req.headers.host));
+    }
+
+    if (parsed.pathname === '/search' && method === 'GET'){
         const query = parsed.query.q || '';
         const results = db.search(query);
         return res.end(views.layout('Search: ' + query, views.articleList(results)));

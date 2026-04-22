@@ -1,75 +1,107 @@
 const fs = require('fs');
 const path = require('path');
 
-const IGNORE_DIRS = ['node_modules', '.git', 'dist', 'build'];
-const IGNORE_FILES = ['dump.txt', 'setup.cjs', 'package-lock.json'];
+// --- КОНФИГУРАЦИЯ ---
+const DUMP_FILE = 'dump.txt';
+const IGNORE_DIRS = ['node_modules', '.git', '.vercel', '.next'];
+const IGNORE_FILES = [DUMP_FILE, 'setup.cjs', 'package-lock.json', 'struct.txt'];
 
-// Функция для создания дампа проекта
-function generateDump() {
+/**
+ * 1. ФУНКЦИЯ ОБНОВЛЕНИЯ DUMP.TXT
+ */
+function createDump() {
+    console.log('\n[1/2] --- ОБНОВЛЕНИЕ DUMP.TXT ---');
     let dumpContent = '';
-    
-    function walk(dir) {
-        const files = fs.readdirSync(dir);
-        for (const file of files) {
+    const walk = (dir) => {
+        fs.readdirSync(dir).forEach(file => {
             const fullPath = path.join(dir, file);
-            const relativePath = path.relative(process.cwd(), fullPath);
-            
-            if (IGNORE_DIRS.some(d => relativePath.includes(d))) continue;
-            if (IGNORE_FILES.includes(file)) continue;
-
+            const relPath = path.relative(process.cwd(), fullPath);
             if (fs.statSync(fullPath).isDirectory()) {
-                walk(fullPath);
-            } else {
+                if (!IGNORE_DIRS.includes(file)) walk(fullPath);
+            } else if (!IGNORE_FILES.includes(file) && !file.endsWith('.bak')) {
                 const content = fs.readFileSync(fullPath, 'utf8');
-                dumpContent += `\n--- FILE: ${relativePath} ---\n${content}\n`;
+                dumpContent += `\n// --- FILE_START: ${relPath} ---\n${content}\n// --- FILE_END: ${relPath} ---\n`;
             }
-        }
-    }
-
+        });
+    };
     walk(process.cwd());
-    fs.writeFileSync('dump.txt', dumpContent);
-    console.log('✅ [SUCCESS] dump.txt обновлен');
+    fs.writeFileSync(DUMP_FILE, dumpContent);
+    console.log(`[DUMP]: Проект упакован в ${DUMP_FILE}`);
 }
 
-// Функция для умной замены блоков
-function replaceInFile(filePath, anchorText, newContent) {
+/**
+ * 2. УМНАЯ ЗАМЕНА БЛОКОВ
+ */
+function smartReplace(filePath, anchor, replacement, description) {
     if (!fs.existsSync(filePath)) {
-        console.log(`❌ [FAIL] Файл не найден: ${filePath}`);
+        console.log(`[FAIL]: ${description} (Файл не найден: ${filePath})`);
         return;
     }
 
-    let fileContent = fs.readFileSync(filePath, 'utf8');
-
-    // Экранируем спецсимволы и превращаем все пробелы/переносы в \s*
-    const escapedAnchor = anchorText
-        .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        .replace(/\s+/g, '\\s*');
+    let content = fs.readFileSync(filePath, 'utf8');
     
-    const regex = new RegExp(escapedAnchor, 'g');
+    // Создаем регулярное выражение из якоря, игнорирующее пробелы, табы и переносы строк
+    const escapedAnchor = anchor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regexStr = escapedAnchor.split(/\s+/).map(s => s + '\\s*').join('');
+    const regex = new RegExp(regexStr, 'm');
 
-    if (regex.test(fileContent)) {
-        // Если нашли, заменяем. В данном случае мы заменяем найденный блок на новый контент
-        const updatedContent = fileContent.replace(regex, newContent);
-        fs.writeFileSync(filePath, updatedContent);
-        console.log(`✅ [SUCCESS] Блок заменен в файле: ${filePath}`);
+    if (regex.test(content)) {
+        // Если replacement содержит '$', используем функцию, чтобы избежать проблем с подстановкой
+        const newContent = content.replace(regex, () => replacement);
+        fs.writeFileSync(filePath, newContent);
+        console.log(`[SUCCESS]: ${description}`);
     } else {
-        console.log(`❌ [FAIL] Не удалось найти блок в файле: ${filePath}`);
-        // Вывод для отладки: что именно искали (первые 30 символов)
-        console.log(`   Искали: "${anchorText.substring(0, 50).trim()}..."`);
+        console.log(`[SKIP]: ${description} (Якорь не найден)`);
     }
 }
 
-// --- ОБРАБОТКА КОМАНД ---
-const mode = process.argv[2];
+/**
+ * 3. ПРИМЕНЕНИЕ ИСПРАВЛЕНИЙ
+ */
+function applyFixes() {
+    console.log('\n[2/2] --- ИСПРАВЛЕНИЕ ОШИБОК ---');
 
-if (mode === 'dump') {
-    generateDump();
-} else if (mode === 'apply') {
-    // Сюда будем добавлять команды на замену в следующих шагах
-    console.log('🚀 Начинаю применение правок...');
-    
-    // ПРИМЕР ИСПОЛЬЗОВАНИЯ (будет заполняться далее):
-    // replaceInFile('src/index.js', 'const x = 10', 'const x = 20');
-} else {
-    console.log('Использование: node setup.cjs [dump|apply]');
+    // Исправление 1: Добавляем аналитику и Sitemap в Router.js
+    smartReplace(
+        'core/Router.js',
+        "const parsed = url.parse(req.url, true);",
+        "const parsed = url.parse(req.url, true);\n    const analytics = require('./Analytics');\n    const sitemap = require('./Sitemap');\n    analytics.track(parsed.pathname);",
+        "Интеграция Analytics.track в Router"
+    );
+
+    // Исправление 2: Добавляем роут для Sitemap
+    smartReplace(
+        'core/Router.js',
+        "if (parsed.pathname === '/search' && method === 'GET')",
+        "if (parsed.pathname === '/sitemap.xml') {\n        res.writeHead(200, { 'Content-Type': 'application/xml' });\n        return res.end(sitemap.generate(req.headers.host));\n    }\n\n    if (parsed.pathname === '/search' && method === 'GET')",
+        "Добавление роута /sitemap.xml"
+    );
+
+    // Исправление 3: Безопасное чтение CSS
+    smartReplace(
+        'core/Router.js',
+        "return res.end(fs.readFileSync(path.join(__dirname, '../public/style.css')));",
+        "const cssPath = path.join(__dirname, '../public/style.css');\n        if (fs.existsSync(cssPath)) return res.end(fs.readFileSync(cssPath));\n        res.end('');",
+        "Безопасный путь к style.css"
+    );
+
+    // Исправление 4: Обработка ошибок записи в Analytics (для Vercel)
+    smartReplace(
+        'core/Analytics.js',
+        "fs.writeFileSync(LOG_FILE, JSON.stringify(stats, null, 2));",
+        "try { fs.writeFileSync(LOG_FILE, JSON.stringify(stats, null, 2)); } catch(e) { console.warn('FS Write access denied'); }",
+        "Защита записи аналитики (Vercel FS)"
+    );
+
+    // Исправление 5: Экспорт для Vercel в index.js
+    smartReplace(
+        'index.js',
+        "module.exports = server;",
+        "module.exports = (req, res) => { router(req, res); };",
+        "Адаптация экспорта под Vercel Serverless"
+    );
 }
+
+// ЗАПУСК
+createDump();
+applyFixes();
